@@ -1,176 +1,91 @@
 # File Exchange Station
 
-## Overview
-A local-first temporary file exchange website running on Node.js + TypeScript, exposed via ngrok, and integrated with LINE Bot for notifications and control.
+本機執行的暫存檔案交換站，使用 Node.js + TypeScript + MySQL，預計透過 ngrok 對外並整合 LINE Bot。
 
-## Fixed technical choices
-- Runtime: Node.js
-- Language: TypeScript
-- Backend style: no heavyweight backend framework
-- Database: MySQL
-- Exposure: ngrok
-- Messaging integration: LINE Messaging API webhook
+## 目前狀態
+- 已建立文件骨架
+- 已建立最小 Node + TypeScript 專案骨架
+- 已加入 `/health` 與 MySQL 連線檢查雛形
+- 已提供 `.env.example`
 
-## Goals
-- Temporary file exchange across devices/users
-- Local execution on the owner's machine
-- External access only through ngrok
-- LINE Bot for workflow control and notifications
-- Automatic cleanup of expired files
-- Keep dependencies low and architecture understandable
-
-## Non-goals
-- Not a permanent cloud drive
-- Not public anonymous file hosting
-- Not a collaboration suite
-
-## Architecture summary
-- Web UI: static HTML/JS/TS-built frontend for upload/download/list operations
-- HTTP service: Node.js native HTTP server or minimal router layer, no large framework
-- Storage metadata: MySQL tables for exchange sessions, files, events, access tokens
-- File blobs: local filesystem storage
-- Public ingress: ngrok HTTPS tunnel
-- Bot interface: LINE webhook endpoint handled by the same Node service
-- Background jobs: expiration cleanup, token invalidation, notification dispatch
-
-## Core modules
-1. Web UI
-2. Upload API
-3. Download API
-4. Exchange session management
-5. LINE Bot webhook handler
-6. Expiration/cleanup worker
-7. Audit/event logging
-8. Config and secret management
-
-## Suggested folder structure
+## 專案結構
 ```text
 file-exchange-station/
   docs/
     architecture.md
     development.md
   src/
+    config/
+    db/
     server/
-    modules/
-    shared/
-    jobs/
-  public/
-  scripts/
   storage/
     uploads/
-  tests/
   .env.example
+  .gitignore
   package.json
   tsconfig.json
 ```
 
-## Data model draft
-### exchange_sessions
-- id
-- code
-- title
-- created_by
-- created_at
-- expires_at
-- status
+## 環境變數
+請複製 `.env.example` 為 `.env`，並填入實際值。
 
-### files
-- id
-- session_id
-- original_name
-- stored_name
-- mime_type
-- size_bytes
-- sha256
-- upload_status
-- created_at
-- expires_at
-- download_count
+```env
+PORT=3000
+APP_BASE_URL=http://localhost:3000
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=file_exchange
+DB_PASSWORD=
+DB_NAME=file_exchange_station
+LINE_CHANNEL_ACCESS_TOKEN=
+LINE_CHANNEL_SECRET=
+NGROK_AUTHTOKEN=
+STORAGE_ROOT=./storage/uploads
+DEFAULT_TTL_MINUTES=1440
+MAX_FILE_SIZE_MB=100
+```
 
-### access_tokens
-- id
-- session_id
-- token_hash
-- scope
-- created_at
-- expires_at
-- max_uses
-- used_count
+## 開發
+安裝依賴：
 
-### events
-- id
-- session_id
-- file_id
-- actor
-- event_type
-- payload_json
-- created_at
+```bash
+npm install
+```
 
-## API draft
-### Public web
-- GET /health
-- GET /api/session/:code
-- GET /api/session/:code/files
-- POST /api/session/:code/upload
-- POST /api/session/:code/complete-upload
-- GET /api/file/:id/download
-- DELETE /api/file/:id
+啟動開發模式：
 
-### LINE webhook
-- POST /webhooks/line
+```bash
+npm run dev
+```
 
-### Internal/admin
-- POST /internal/session
-- POST /internal/session/:id/expire
-- POST /internal/ngrok/refresh-webhook
+型別檢查：
 
-## LINE Bot capabilities
-- Create temporary exchange session
-- Return upload URL and expiry
-- Notify on upload completion
-- Notify before expiry
-- Show active sessions
-- Delete file/session on command
-- Rebind webhook URL when ngrok URL changes
+```bash
+npm run typecheck
+```
 
-## Security requirements
-- Never expose local paths
-- Verify LINE signature
-- Use high-entropy session codes/tokens
-- Hash stored tokens
-- Restrict file size/types if needed
-- Normalize filenames
-- Enforce TTL cleanup
-- Keep secrets only in env/config, never in client
-- Audit uploads/downloads/deletes
+建置：
 
-## Development phases
-### Phase 1 - MVP
-- Session creation
-- Drag-and-drop upload
-- File list
-- Download
-- Manual delete
-- TTL cleanup
-- LINE notifications
+```bash
+npm run build
+```
 
-### Phase 2 - Better UX
-- Progress bars
-- Countdown timers
-- Polling or SSE refresh
-- One-time download links
-- Download limits
+## 健康檢查
+啟動後可檢查：
 
-### Phase 3 - Robustness
-- Chunk upload
-- Resume upload
-- Rate limiting
-- Better audit logs
-- Automatic LINE webhook refresh when ngrok changes
+```bash
+curl http://127.0.0.1:3000/health
+```
 
-## Deployment notes
-- Run locally with Node.js
-- MySQL can be local or remote
-- ngrok provides HTTPS public endpoint
-- Update LINE webhook to current ngrok URL
-- Prefer process manager for local service (systemd/pm2)
+成功時會回傳應用狀態與資料庫連線狀態。
+
+## 文件
+- `docs/architecture.md`：整體架構與模組邊界
+- `docs/development.md`：開發環境、流程、實作順序
+
+## 下一步
+- session / file schema migration
+- upload / download API
+- LINE webhook handler
+- cleanup job
+- ngrok webhook refresh flow
