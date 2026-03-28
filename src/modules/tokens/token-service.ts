@@ -1,5 +1,7 @@
 import { generateToken, hashToken } from '../../shared/crypto.js';
 
+export { hashToken };
+
 export type TokenRecord = {
   token: string;
   hash: string;

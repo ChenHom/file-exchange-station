@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Exchange Station</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
+        .session-info { background: #f4f4f4; padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
+        .file-list { list-style: none; padding: 0; }
+        .file-item { border-bottom: 1px solid #ddd; padding: 1rem 0; display: flex; justify-content: space-between; align-items: center; }
+        .upload-area { border: 2px dashed #ccc; padding: 2rem; text-align: center; margin-bottom: 2rem; cursor: pointer; }
+        .upload-area:hover { border-color: #666; }
+        button { cursor: pointer; padding: 0.5rem 1rem; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>File Exchange Station</h1>
+    <div id="app">
+        <div id="session-container" style="display:none;">
+            <div class="session-info">
+                <h2 id="session-title">載入中...</h2>
+                <p>代碼: <span id="session-code"></span> | 到期時間: <span id="session-expiry"></span></p>
+            </div>
+
+            <h3>檔案列表</h3>
+            <ul id="file-list" class="file-list"></ul>
+
+            <div id="upload-area" class="upload-area">
+                將檔案拖曳至此或點擊上傳
+                <input type="file" id="file-input" style="display:none;">
+            </div>
+            <p id="upload-status"></p>
+        </div>
+
+        <div id="no-session">
+            <p>請從 LINE Bot 進入或輸入 Session 代碼：</p>
+            <input type="text" id="code-input" placeholder="Session Code">
+            <button onclick="loadSession()">進入</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSession = null;
+
+        async function loadSession() {
+            const code = document.getElementById('code-input').value || new URLSearchParams(window.location.search).get('code');
+            if (!code) return;
+
+            try {
+                const res = await fetch(`/api/sessions/${code}`);
+                if (!res.ok) throw new Error('Session 不存在');
+                currentSession = await res.json();
+
+                document.getElementById('session-title').textContent = currentSession.title || '無標題';
+                document.getElementById('session-code').textContent = currentSession.code;
+                document.getElementById('session-expiry').textContent = new Date(currentSession.expiresAt).toLocaleString();
+                
+                document.getElementById('session-container').style.display = 'block';
+                document.getElementById('no-session').style.display = 'none';
+                
+                refreshFileList();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function refreshFileList() {
+            const res = await fetch(`/api/sessions/${currentSession.code}/files`);
+            const data = await res.json();
+            const list = document.getElementById('file-list');
+            list.innerHTML = '';
+
+            data.files.forEach(file => {
+                const li = document.createElement('li');
+                li.className = 'file-item';
+                li.innerHTML = `
+                    <div>
+                        <strong>${file.originalName}</strong><br>
+                        <small>${(file.sizeBytes / 1024 / 1024).toFixed(2)} MB | 下載次數: ${file.downloadCount}</small>
+                    </div>
+                    <div>
+                        <button onclick="downloadFile(${file.id})">下載</button>
+                        <button onclick="deleteFile(${file.id})" style="color:red">刪除</button>
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        async function downloadFile(id) {
+            // 在 MVP 中，token 直接由列表 API 回傳（Issue #4 提到 token 不應明文存 DB，但上傳時會回傳一次）
+            // 這裡為了方便，假設列表有包含 token 或由其他方式取得
+            // 修正：uploadFile 回傳了 token，但列表目前沒回傳 token_hash 對應的原始 token。
+            // 實務上可能需要 session token。
+            // 為了簡化，我們先讓 upload 完跳出 token，或者由 LINE Bot 提供帶 token 的連結。
+            alert('請由正確連結進入以包含 Token');
+        }
+
+        async function deleteFile(id) {
+            if (!confirm('確定刪除？')) return;
+            const token = prompt('輸入 Token 以驗證（測試用）');
+            const res = await fetch(`/api/files/${id}?token=${token}`, { method: 'DELETE' });
+            if (res.ok) {
+                refreshFileList();
+            } else {
+                alert('刪除失敗');
+            }
+        }
+
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+
+        uploadArea.onclick = () => fileInput.click();
+        fileInput.onchange = (e) => handleUpload(e.target.files[0]);
+
+        async function handleUpload(file) {
+            if (!file) return;
+            const status = document.getElementById('upload-status');
+            status.textContent = '上傳中...';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch(`/api/sessions/${currentSession.code}/files`, {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!res.ok) throw new Error('上傳失敗');
+                const result = await res.json();
+                status.innerHTML = `上傳成功！你的 Token 是: <code>${result.token}</code><br>請記住此 Token，下載與刪除皆需使用。`;
+                refreshFileList();
+            } catch (err) {
+                status.textContent = '錯誤: ' + err.message;
+            }
+        }
+
+        // Auto load if code in URL
+        if (new URLSearchParams(window.location.search).get('code')) {
+            loadSession();
+        }
+    </script>
+</body>
+</html>

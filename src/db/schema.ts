@@ -1,4 +1,4 @@
-export const schemaVersion = 1;
+export const schemaVersion = 6;
 
 export const migrations = [
   `CREATE TABLE IF NOT EXISTS exchange_sessions (
@@ -41,5 +41,13 @@ export const migrations = [
     KEY idx_events_created_at (created_at),
     CONSTRAINT fk_events_session_id FOREIGN KEY (session_id) REFERENCES exchange_sessions(id) ON DELETE SET NULL,
     CONSTRAINT fk_events_file_id FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `ALTER TABLE files ADD COLUMN token_hash VARCHAR(255) NULL AFTER status`,
+  `ALTER TABLE files ADD COLUMN download_count INT UNSIGNED NOT NULL DEFAULT 0 AFTER token_hash`,
+  `CREATE TABLE IF NOT EXISTS system_config (
+    config_key VARCHAR(64) NOT NULL,
+    config_value TEXT NULL,
+    updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (config_key)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
 ] as const;
