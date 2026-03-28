@@ -1,91 +1,65 @@
 # File Exchange Station
 
-本機執行的暫存檔案交換站，使用 Node.js + TypeScript + MySQL，預計透過 ngrok 對外並整合 LINE Bot。
+本機執行的暫存檔案交換站，使用 Node.js + TypeScript + MySQL，透過 ngrok 對外並整合 LINE Bot。
 
-## 目前狀態
-- 已建立文件骨架
-- 已建立最小 Node + TypeScript 專案骨架
-- 已加入 `/health` 與 MySQL 連線檢查雛形
-- 已提供 `.env.example`
+## 現況
+- Node + TypeScript 骨架已建立
+- MySQL migration 已可跑
+- Session / file / event 基礎 domain 已開始實作
+- `/health` 與核心 API 路由已建立
+- README / docs 已整理
 
 ## 專案結構
 ```text
-file-exchange-station/
-  docs/
-    architecture.md
-    development.md
-  src/
-    config/
-    db/
-    server/
-  storage/
-    uploads/
-  .env.example
-  .gitignore
-  package.json
-  tsconfig.json
+src/
+  config/
+  db/
+  jobs/
+  modules/
+    events/
+    files/
+    line/
+    sessions/
+    storage/
+    tokens/
+  server/
+  shared/
 ```
 
 ## 環境變數
-請複製 `.env.example` 為 `.env`，並填入實際值。
+請以 `.env.example` 複製出 `.env`。
 
-```env
-PORT=3000
-APP_BASE_URL=http://localhost:3000
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_USER=file_exchange
-DB_PASSWORD=
-DB_NAME=file_exchange_station
-LINE_CHANNEL_ACCESS_TOKEN=
-LINE_CHANNEL_SECRET=
-NGROK_AUTHTOKEN=
-STORAGE_ROOT=./storage/uploads
-DEFAULT_TTL_MINUTES=1440
-MAX_FILE_SIZE_MB=100
-```
-
-## 開發
-安裝依賴：
-
+## 開發指令
 ```bash
 npm install
-```
-
-啟動開發模式：
-
-```bash
 npm run dev
-```
-
-型別檢查：
-
-```bash
 npm run typecheck
-```
-
-建置：
-
-```bash
 npm run build
 ```
 
-## 健康檢查
-啟動後可檢查：
+## API 概要
+- `GET /health`
+- `GET /`
+- `POST /api/sessions`
+- `GET /api/sessions`
+- `GET /api/sessions/:code`
+- `GET /api/sessions/:code/files`
+- `DELETE /api/files/:id`
+- `GET /api/files/:id/download`
+- `POST /webhooks/line`
 
-```bash
-curl http://127.0.0.1:3000/health
-```
+## 已完成的方向
+- local-first
+- MySQL metadata
+- filesystem storage
+- token / hash 基礎
+- cleanup job 雛形
+- LINE webhook stub
 
-成功時會回傳應用狀態與資料庫連線狀態。
-
-## 文件
-- `docs/architecture.md`：整體架構與模組邊界
-- `docs/development.md`：開發環境、流程、實作順序
-
-## 下一步
-- session / file schema migration
-- upload / download API
-- LINE webhook handler
-- cleanup job
-- ngrok webhook refresh flow
+## 下一步還要補
+- 真正的 multipart upload
+- download stream
+- session/file token 驗證
+- LINE signature 驗證
+- cleanup job 完整化
+- go-live runbook
