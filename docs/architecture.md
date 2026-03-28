@@ -8,26 +8,26 @@
 - LINE Bot 管流程
 
 ## 模組切分
-- `src/config`：環境變數
-- `src/db`：MySQL 連線與 migration
-- `src/modules/sessions`：session 生命週期
-- `src/modules/files`：上傳/下載/刪除
-- `src/modules/storage`：檔案落盤與刪除
-- `src/modules/tokens`：token 產生與雜湊
-- `src/modules/events`：audit/event
-- `src/modules/line`：LINE webhook
-- `src/jobs`：cleanup
-- `src/server`：HTTP routes
+- `src/config`：環境變數與核心配置
+- `src/db`：MySQL 連線、migration 與查詢輔助工具
+- `src/modules/sessions`：交換站生命週期管理
+- `src/modules/files`：檔案 metadata、上傳、下載與刪除邏輯
+- `src/modules/storage`：實體檔案讀取、寫入與刪除 (FS 層)
+- `src/modules/tokens`：HMAC-based 安全 Token 產生與驗證
+- `src/modules/events`：稽核與事件日誌記錄
+- `src/modules/line`：LINE Webhook 解析與 Messaging API 客戶端
+- `src/jobs`：自動清理過期會話與實體檔案的排程任務
+- `src/server`：HTTP Server 基底與 RESTful 路由分發
 
 ## 設計原則
-- transport 不放 business logic
-- service 不直接綁 HTTP
-- storage 不直接綁 LINE
-- token 不明文存 DB
-- local path 不外露
+- Transport 不放 Business Logic
+- Service 不直接與 HTTP Request/Response 耦合
+- Storage 不直接綁定特定業務場景
+- 安全性：Token 不明文存入 DB，使用雜湊驗證
+- 隱私：不洩漏本地檔案路徑給前端
 
-## 上線前缺口
-- 真正的 upload/download stream
-- LINE signature 驗證
-- ngrok webhook refresh
-- runbook / smoke test
+## 目前核心實現
+- 基於 Stream 的 Multipart 上傳與檔案下載
+- LINE Webhook 簽章驗證 (X-Line-Signature)
+- 啟動時自動探索並同步 ngrok 本地位址
+- 定時掃描並執行實體檔案清理 (Garbage Collection)
