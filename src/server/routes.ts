@@ -83,14 +83,14 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
       if (req.method !== 'GET') return methodNotAllowed(res);
       try {
         const content = await readFile(join(process.cwd(), 'public/index.html'));
-        res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-        res.end(content);
-      } catch {
-        sendSuccess(res, 200, {
-          name: 'file-exchange-station',
-          status: 'ok',
-          routes: ['/health', '/api/sessions', '/api/sessions/:code']
+        res.writeHead(200, { 
+          'content-type': 'text/html; charset=utf-8',
+          'cache-control': 'no-cache'
         });
+        res.end(content);
+      } catch (err) {
+        console.error('[Static Error]', err);
+        sendError(res, 500, 'INTERNAL_ERROR', 'Failed to load frontend');
       }
       return;
     }

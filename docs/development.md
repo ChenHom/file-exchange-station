@@ -8,6 +8,10 @@
 5. 存取 `http://localhost:3000/health` 確認狀態
 
 ## 目前實作核心
+- **前端儀表板 (Phase 3.1)**: 
+  - 實作 Vanilla JS SPA 介面，支援以 Session Code 存取與管理。
+  - 實作上傳進度條 (XHR) 與 Session 到期即時倒數計時。
+  - 介面適配行動裝置，支援 Token 驗證下載與刪除。
 - **Session 建立與查詢 (P1)**: 支援 12 碼隨機 Code、24 小時自動過期、動態過期狀態判定。
 - **檔案交換流程 (P2)**: 
   - 支援 10 碼隨機 File Code，對外完全隱藏數字 ID。
