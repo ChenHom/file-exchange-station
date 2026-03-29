@@ -41,12 +41,17 @@ npm run build      # 編譯 TypeScript
 npm run start      # 啟動編譯後的專案
 ```
 
-## API 概要
+## API 規格
+所有 API 回應均遵循以下格式：
+- **成功**: `{ "success": true, "data": { ... } }`
+- **失敗**: `{ "success": false, "error": { "code": "ERR_CODE", "message": "..." } }`
+
+詳細規格請參閱：[Session 建立與查詢規格 (P1 Finalized Spec)](docs/spec-session.md)
+
+### 核心 API 概要
 - `GET /health` - 系統健康檢查
-- `GET /` - 簡單前端入口 (或 API 資訊)
-- `POST /api/sessions` - 建立新的交換站
-- `GET /api/sessions` - 列出所有活動中的交換站
-- `GET /api/sessions/:code` - 取得指定交換站資訊
+- `POST /api/sessions` - 建立新的交換站 (24h 有效，回傳 12 碼 Code)
+- `GET /api/sessions/:code` - 取得指定交換站資訊 (包含過期狀態動態判定)
 - `GET /api/sessions/:code/files` - 列出交換站內的檔案
 - `POST /api/sessions/:code/files` - 上傳檔案 (Multipart)
 - `GET /api/files/:id/download?token=xxx` - 下載檔案 (需驗證 Token)
@@ -57,4 +62,4 @@ npm run start      # 啟動編譯後的專案
 - 前端網頁介面開發 (目前僅有 index.html 骨架)
 - 多檔案批次下載支援 (ZIP 打包)
 - 檔案過期前的 LINE 主動通知功能
-- 更完善的單元測試與整合測試
+- 完善的單元測試與整合測試 (BDD Coverage)
