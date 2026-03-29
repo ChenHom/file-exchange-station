@@ -35,7 +35,7 @@
     "success": true,
     "data": {
       "session": {
-        "code": "ABC-123-XYZ",
+        "code": "ABCDEFGH2345",
         "title": "我的交換站",
         "status": "active",
         "expiresAt": "2026-03-30T15:00:00.000Z",
