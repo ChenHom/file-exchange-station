@@ -62,8 +62,10 @@ npm run start      # 啟動編譯後的專案
 - `DELETE /api/files/:code?token=xxx` - 刪除檔案 (需驗證 Token)
 - `POST /webhooks/line` - LINE Webhook 接收端
 
-## 下一步開發建議
-- 前端網頁介面開發 (目前僅有 index.html 骨架)
-- 多檔案批次下載支援 (ZIP 打包)
-- 檔案過期前的 LINE 主動通知功能
-- 完善的單元測試與整合測試 (BDD Coverage)
+### 安全與維運 (P3)
+- **基礎頻率限制 (Rate Limiting)**:
+  - 建立 Session: 每分鐘限制 5 次。
+  - 全域 API 存取: 每分鐘限制 60 次。
+- **儲存空間保護**: 上傳前自動檢查磁碟空間，低於 100MB (預設) 時將禁止上傳。
+- **維運監控**: 前端 Dashboard 頂端顯示即時磁碟使用量與最後一次清理記錄。
+- **自動清理**: 背景任務定時清理過期 Session 與標記為 `deleted` 的實體檔案。

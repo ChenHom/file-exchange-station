@@ -136,10 +136,12 @@
         async function fetchStats() {
             try {
                 const res = await fetch('/api/stats');
-                const data = await res.json();
-                if (data.success) {
-                    const ds = data.data.diskSpace;
-                    document.getElementById('sys-stats').textContent = `系統儲存空間: ${ds.usedMB}MB / ${ds.totalMB}MB (${ds.usagePercent}%)`;
+                const result = await res.json();
+                if (result.success) {
+                    const ds = result.data.diskSpace;
+                    const cl = result.data.cleanup;
+                    const cleanupText = cl.lastRunAt ? ` | 上次清理: ${new Date(cl.lastRunAt).toLocaleString()} (刪除 ${cl.removedCount} 檔)` : '';
+                    document.getElementById('sys-stats').textContent = `系統儲存空間: ${ds.usedMB}MB / ${ds.totalMB}MB (${ds.usagePercent}%)${cleanupText}`;
                 }
             } catch (e) {
                 document.getElementById('sys-stats').textContent = '系統狀態: 未知';

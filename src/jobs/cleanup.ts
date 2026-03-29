@@ -40,5 +40,15 @@ export async function cleanupExpired(): Promise<number> {
     }
   }
 
+  // 3. 記錄執行狀態到 system_config
+  const stats = {
+    lastRunAt: new Date().toISOString(),
+    removedCount: removed
+  };
+  await execute(
+    'INSERT INTO system_config (config_key, config_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE config_value = ?',
+    ['last_cleanup_stats', JSON.stringify(stats), JSON.stringify(stats)]
+  );
+
   return removed;
 }

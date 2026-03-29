@@ -12,9 +12,23 @@ import { verifyToken } from '../modules/tokens/token-service.js';
 import { openFileStream } from '../modules/storage/filesystem.js';
 import { lineWebhookHandler } from './line-webhook.js';
 import { getSystemStats } from '../jobs/stats.js';
+import { isRateLimited } from '../shared/rate-limit.js';
 
 function methodNotAllowed(res: ServerResponse): void {
   sendError(res, 405, 'METHOD_NOT_ALLOWED', 'Method Not Allowed');
+}
+
+/**
+ * 通用 Rate Limit 檢查
+ */
+function checkRateLimit(res: ServerResponse, key: string, limit: number, windowMs: number): boolean {
+  const result = isRateLimited(key, limit, windowMs);
+  if (!result.allowed) {
+    res.setHeader('Retry-After', Math.ceil((result.resetAt - Date.now()) / 1000));
+    sendError(res, 429, 'TOO_MANY_REQUESTS', 'Rate limit exceeded');
+    return false;
+  }
+  return true;
 }
 
 function sendSuccess(res: ServerResponse, statusCode: number, data: unknown): void {
@@ -72,6 +86,10 @@ async function parseJsonBody(req: IncomingMessage): Promise<Record<string, unkno
 export async function routeRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   try {
     const url = new URL(req.url ?? '/', 'http://localhost');
+    const clientIp = req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || 'unknown';
+
+    // 全域 Rate Limit (每分鐘 60 次)
+    if (!checkRateLimit(res, `global:${clientIp}`, 60, 60000)) return;
 
     if (url.pathname === '/health') {
       if (req.method !== 'GET') return methodNotAllowed(res);
@@ -104,6 +122,9 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
 
     // POST /api/sessions - 建立 Session
     if (url.pathname === '/api/sessions' && req.method === 'POST') {
+      // 建立 Session 限制 (每分鐘 5 次)
+      if (!checkRateLimit(res, `create-session:${clientIp}`, 5, 60000)) return;
+
       const body = await parseJsonBody(req);
       
       if (body.title !== undefined && typeof body.title !== 'string') {
