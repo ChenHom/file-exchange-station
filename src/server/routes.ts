@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { readRequestBody, readRawBody, sendJson, parseMultipart, streamFile } from './http.js';
 import { healthHandler } from './health.js';
 import { createSession, getSessionByCode, listActiveSessions, getSessionById, type SessionRecord } from '../modules/sessions/session-service.js';
-import { listFilesBySession, uploadFile, deleteFile, getFileById, incrementDownloadCount } from '../modules/files/file-service.js';
+import { listFilesBySession, uploadFile, deleteFile, getFileById, getFileByCode, incrementDownloadCount } from '../modules/files/file-service.js';
 import { env } from '../config/env.js';
 import { AppError } from '../shared/errors.js';
 import { verifyToken } from '../modules/tokens/token-service.js';
@@ -38,6 +38,25 @@ function sanitizeSession(session: SessionRecord) {
   }
   
   return rest;
+}
+
+/**
+ * 移除 File 中的敏感/內部欄位
+ */
+function sanitizeFile(file: any) {
+  const { id, sessionId, tokenHash, storedName, ...rest } = file;
+  return rest;
+}
+
+/**
+ * 檢查 Session 是否為 Active
+ * 若已過期或已刪除，在執行變動操作(上傳/下載/刪除)時應禁止。
+ */
+function isSessionActive(session: SessionRecord): boolean {
+  if (session.status !== 'active') return false;
+  const now = new Date();
+  const expiresAt = new Date(session.expiresAt);
+  return now <= expiresAt;
 }
 
 async function parseJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
@@ -130,11 +149,16 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
 
       if (req.method === 'GET') {
         const files = await listFilesBySession(session.id);
-        sendSuccess(res, 200, { session: sanitizeSession(session), files });
+        sendSuccess(res, 200, { session: sanitizeSession(session), files: files.map(sanitizeFile) });
         return;
       }
 
       if (req.method === 'POST') {
+        // Expired session 禁止上傳
+        if (!isSessionActive(session)) {
+          throw new AppError('Session is no longer active', 403, 'FORBIDDEN');
+        }
+
         const contentType = req.headers['content-type'] || '';
         if (!contentType.includes('multipart/form-data')) {
           throw new AppError('Content-Type must be multipart/form-data', 400, 'BAD_REQUEST');
@@ -148,27 +172,35 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
         }
 
         const result = await uploadFile(session.id, filePart.filename, filePart.mimeType, filePart.data);
-        sendSuccess(res, 201, result);
+        const file = await getFileById(result.id);
+        if (!file) throw new Error('Upload failed');
+
+        sendSuccess(res, 201, { 
+          file: sanitizeFile(file),
+          downloadToken: result.token
+        });
         return;
       }
       return methodNotAllowed(res);
     }
 
-    // File download: /api/files/:id/download
-    const fileDownloadMatch = url.pathname.match(/^\/api\/files\/(\d+)\/download$/);
+    // File download: /api/files/:code/download
+    const fileDownloadMatch = url.pathname.match(/^\/api\/files\/([^/]+)\/download$/);
     if (fileDownloadMatch) {
       if (req.method !== 'GET') return methodNotAllowed(res);
-      const fileId = parseInt(fileDownloadMatch[1] ?? '0', 10);
+      const fileCode = fileDownloadMatch[1];
       const token = url.searchParams.get('token') || '';
 
-      const file = await getFileById(fileId);
+      if (!fileCode) throw new AppError('Invalid file code', 400, 'BAD_REQUEST');
+      const file = await getFileByCode(fileCode);
       if (!file || file.status === 'deleted') throw new AppError('File not found', 404, 'FILE_NOT_FOUND');
+      
       if (!file.tokenHash || !verifyToken(token, file.tokenHash)) {
         throw new AppError('Invalid or missing token', 403, 'FORBIDDEN');
       }
 
       const session = await getSessionById(file.sessionId);
-      if (!session || session.status !== 'active') {
+      if (!session || !isSessionActive(session)) {
         throw new AppError('Session is no longer active', 403, 'FORBIDDEN');
       }
 
@@ -178,21 +210,28 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
       return;
     }
 
-    // File delete: /api/files/:id
-    const fileDeleteMatch = url.pathname.match(/^\/api\/files\/(\d+)$/);
+    // File delete: /api/files/:code
+    const fileDeleteMatch = url.pathname.match(/^\/api\/files\/([^/]+)$/);
     if (fileDeleteMatch) {
       if (req.method !== 'DELETE') return methodNotAllowed(res);
-      const fileId = parseInt(fileDeleteMatch[1] ?? '0', 10);
+      const fileCode = fileDeleteMatch[1];
       const token = url.searchParams.get('token') || '';
 
-      const file = await getFileById(fileId);
+      if (!fileCode) throw new AppError('Invalid file code', 400, 'BAD_REQUEST');
+      const file = await getFileByCode(fileCode);
       if (!file || file.status === 'deleted') throw new AppError('File not found', 404, 'FILE_NOT_FOUND');
+      
       if (!file.tokenHash || !verifyToken(token, file.tokenHash)) {
         throw new AppError('Invalid or missing token', 403, 'FORBIDDEN');
       }
 
-      await deleteFile(fileId);
-      sendSuccess(res, 200, { success: true });
+      const session = await getSessionById(file.sessionId);
+      if (!session || !isSessionActive(session)) {
+        throw new AppError('Session is no longer active', 403, 'FORBIDDEN');
+      }
+
+      await deleteFile(file.id);
+      sendSuccess(res, 200, { deleted: true });
       return;
     }
 

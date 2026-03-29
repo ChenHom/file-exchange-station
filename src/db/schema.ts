@@ -1,4 +1,4 @@
-export const schemaVersion = 6;
+export const schemaVersion = 7;
 
 export const migrations = [
   `CREATE TABLE IF NOT EXISTS exchange_sessions (
@@ -49,5 +49,6 @@ export const migrations = [
     config_value TEXT NULL,
     updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     PRIMARY KEY (config_key)
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `ALTER TABLE files ADD COLUMN code VARCHAR(32) NULL AFTER session_id, ADD UNIQUE KEY uniq_files_code (code)`
 ] as const;

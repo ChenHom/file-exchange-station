@@ -46,16 +46,18 @@ npm run start      # 啟動編譯後的專案
 - **成功**: `{ "success": true, "data": { ... } }`
 - **失敗**: `{ "success": false, "error": { "code": "ERR_CODE", "message": "..." } }`
 
-詳細規格請參閱：[Session 建立與查詢規格 (P1 Finalized Spec)](docs/spec-session.md)
+詳細規格請參閱：
+- [Session 建立與查詢規格 (P1 Finalized Spec)](docs/spec-session.md)
+- [檔案交換流程規格 (P2 Finalized Spec)](docs/spec-file-flow.md)
 
 ### 核心 API 概要
 - `GET /health` - 系統健康檢查
 - `POST /api/sessions` - 建立新的交換站 (24h 有效，回傳 12 碼 Code)
-- `GET /api/sessions/:code` - 取得指定交換站資訊 (包含過期狀態動態判定)
+- `GET /api/sessions/:code` - 取得指定交換站資訊
 - `GET /api/sessions/:code/files` - 列出交換站內的檔案
 - `POST /api/sessions/:code/files` - 上傳檔案 (Multipart)
-- `GET /api/files/:id/download?token=xxx` - 下載檔案 (需驗證 Token)
-- `DELETE /api/files/:id?token=xxx` - 刪除檔案 (需驗證 Token)
+- `GET /api/files/:code/download?token=xxx` - 下載檔案 (需驗證 Token)
+- `DELETE /api/files/:code?token=xxx` - 刪除檔案 (需驗證 Token)
 - `POST /webhooks/line` - LINE Webhook 接收端
 
 ## 下一步開發建議
