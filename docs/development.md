@@ -31,7 +31,7 @@
 - **測試框架**: 使用 Vitest 進行單元與整合測試。
 - **執行測試**: `npm test`
 - **測試範圍**:
-  - `src/jobs/__tests__/stats.test.ts`: 驗證磁碟空間監控邏輯。
-  - `tests/api-p3.test.ts`: 驗證 P3 API 路由 (ZIP 下載、系統狀態、上傳保護)。
+  - `src/jobs/__tests__/stats.test.ts`: 驗證磁碟空間監控邏輯 (含磁碟空間為 0 的邊界情境)。
+  - `tests/api-p3.test.ts`: 驗證 P3 API 路由 (含 Session 不存在、已過期、空 Session 及磁碟容量保護攔截等正向與反向情境)。
 - 完善 LINE 互動介面 (Rich Menu, Flex Message)
 - 檔案預覽功能與快取優化

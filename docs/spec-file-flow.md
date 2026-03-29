@@ -38,36 +38,16 @@
 
 ---
 
-## 2. 檔案列表 (`GET /api/sessions/:code/files`)
+## 2.5 批次打包下載 (`GET /api/sessions/:code/download-all`)
 
-### Endpoint
-- `GET /api/sessions/:code/files`
+### Request
+- **Endpoint**: `GET /api/sessions/:code/download-all`
 
 ### Behavior
-- **Expired Session**: 仍允許列出檔案清單。
-
-### Success Response
-- **Status**: `200 OK`
-- **Body**:
-  ```json
-  {
-    "success": true,
-    "data": {
-      "session": { "code": "ABC123XYZ789", "status": "active" },
-      "files": [
-        {
-          "code": "ABCDEFGH23",
-          "originalName": "photo.jpg",
-          "sizeBytes": 1048576,
-          "mimeType": "image/jpeg",
-          "downloadCount": 3,
-          "createdAt": "...",
-          "updatedAt": "..."
-        }
-      ]
-    }
-  }
-  ```
+- **Success**: 系統將 Session 下所有 `ready` 狀態的檔案打包為 ZIP。
+- **Response Header**: `Content-Type: application/zip`, `Content-Disposition: attachment; filename="session-{code}.zip"`。
+- **Session Expired**: 禁止下載，回傳 `403 FORBIDDEN`。
+- **Empty Session**: 若無任何檔案，回傳 `404 FILE_NOT_FOUND`。
 
 ---
 

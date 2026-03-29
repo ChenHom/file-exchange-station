@@ -52,10 +52,12 @@ npm run start      # 啟動編譯後的專案
 
 ### 核心 API 概要
 - `GET /health` - 系統健康檢查
+- `GET /api/stats` - 系統儲存空間狀態 (P3)
 - `POST /api/sessions` - 建立新的交換站 (24h 有效，回傳 12 碼 Code)
 - `GET /api/sessions/:code` - 取得指定交換站資訊
 - `GET /api/sessions/:code/files` - 列出交換站內的檔案
-- `POST /api/sessions/:code/files` - 上傳檔案 (Multipart)
+- `GET /api/sessions/:code/download-all` - 一鍵打包下載所有檔案 (ZIP, P3)
+- `POST /api/sessions/:code/files` - 上傳檔案 (Multipart, 具備容量保護)
 - `GET /api/files/:code/download?token=xxx` - 下載檔案 (需驗證 Token)
 - `DELETE /api/files/:code?token=xxx` - 刪除檔案 (需驗證 Token)
 - `POST /webhooks/line` - LINE Webhook 接收端
