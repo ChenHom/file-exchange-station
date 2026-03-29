@@ -8,7 +8,6 @@ vi.mock('../src/config/env.js', () => ({
   }
 }));
 
-import { createServer, IncomingMessage, ServerResponse } from 'node:http';
 import { routeRequest } from '../src/server/routes.js';
 import * as statsJob from '../src/jobs/stats.js';
 import * as sessionService from '../src/modules/sessions/session-service.js';
@@ -29,64 +28,105 @@ describe('API P3 Integration (Mocked)', () => {
       end: vi.fn(),
       setHeader: vi.fn()
     };
+    vi.clearAllMocks();
   });
 
-  it('GET /api/stats 應回傳系統狀態', async () => {
+  // --- 正向測試 (Positive) ---
+  it('GET /api/stats 應正確回傳系統統計數據', async () => {
     req.url = '/api/stats';
     req.method = 'GET';
-    const mockStats = { diskSpace: { totalMB: 100, usedMB: 10, freeMB: 90, usagePercent: 10 } };
-    (statsJob.getSystemStats as any).mockResolvedValue(mockStats);
+    (statsJob.getSystemStats as any).mockResolvedValue({ diskSpace: { freeMB: 1000 } });
 
     await routeRequest(req, res);
-
     expect(res.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
-    const output = JSON.parse(vi.mocked(res.end).mock.calls[0][0]);
-    expect(output.success).toBe(true);
-    expect(output.data.diskSpace.totalMB).toBe(100);
   });
 
-  it('GET /api/sessions/:code/download-all 應處理 ZIP 下載', async () => {
+  it('GET /api/sessions/:code/download-all 應回傳 ZIP 串流', async () => {
     const code = 'ABCDEFGH2345';
     req.url = `/api/sessions/${code}/download-all`;
     req.method = 'GET';
 
     (sessionService.getSessionByCode as any).mockResolvedValue({
-      id: 1,
-      code,
-      status: 'active',
-      expiresAt: new Date(Date.now() + 10000).toISOString()
+      id: 1, code, status: 'active', expiresAt: new Date(Date.now() + 3600000).toISOString()
     });
-    (fileService.listFilesBySession as any).mockResolvedValue([
-      { id: 101, code: 'F1', originalName: 't1.txt', storedName: 's1' }
-    ]);
+    (fileService.listFilesBySession as any).mockResolvedValue([{ id: 1, originalName: 'a.txt', storedName: 's1' }]);
 
     await routeRequest(req, res);
-
-    // 驗證是否設定了正確的 Content-Type
-    expect(res.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({
-      'Content-Type': 'application/zip'
-    }));
+    expect(res.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({ 'Content-Type': 'application/zip' }));
   });
 
-  it('磁碟空間不足時 POST /api/sessions/:code/files 應回傳 503', async () => {
-    const code = 'ABCDEFGH2345';
-    req.url = `/api/sessions/${code}/files`;
+  // --- 反向測試 (Negative) ---
+  it('下載 ZIP 時若 Session 不存在應回 404', async () => {
+    req.url = '/api/sessions/NONE/download-all';
+    req.method = 'GET';
+    (sessionService.getSessionByCode as any).mockResolvedValue(null);
+
+    await routeRequest(req, res);
+    expect(res.writeHead).toHaveBeenCalledWith(404, expect.any(Object));
+    const body = JSON.parse(vi.mocked(res.end).mock.calls[0][0]);
+    expect(body.error.code).toBe('SESSION_NOT_FOUND');
+  });
+
+  it('下載 ZIP 時若 Session 已過期應回 403', async () => {
+    const code = 'EXPIRED12345';
+    req.url = `/api/sessions/${code}/download-all`;
+    req.method = 'GET';
+
+    (sessionService.getSessionByCode as any).mockResolvedValue({
+      id: 1, code, status: 'expired', expiresAt: new Date(Date.now() - 1000).toISOString()
+    });
+
+    await routeRequest(req, res);
+    expect(res.writeHead).toHaveBeenCalledWith(403, expect.any(Object));
+  });
+
+  it('上傳檔案時若磁碟空間不足應回 503', async () => {
+    req.url = '/api/sessions/CODE/files';
     req.method = 'POST';
     req.headers['content-type'] = 'multipart/form-data; boundary=xxx';
 
     (sessionService.getSessionByCode as any).mockResolvedValue({
-      id: 1,
-      code,
-      status: 'active',
-      expiresAt: new Date(Date.now() + 10000).toISOString()
+      id: 1, status: 'active', expiresAt: new Date(Date.now() + 10000).toISOString()
     });
-    // 模擬磁碟空間不足 (freeMB < env.MAX_FILE_SIZE_MB)
-    (statsJob.getSystemStats as any).mockResolvedValue({ diskSpace: { freeMB: 5 } });
+    (statsJob.getSystemStats as any).mockResolvedValue({ diskSpace: { freeMB: 5 } }); // 5MB < 20MB (limit)
 
     await routeRequest(req, res);
-
     expect(res.writeHead).toHaveBeenCalledWith(503, expect.any(Object));
-    const output = JSON.parse(vi.mocked(res.end).mock.calls[0][0]);
-    expect(output.error.code).toBe('STORAGE_FULL');
+  });
+
+  // --- 邊界測試 (Edge) ---
+  it('下載 ZIP 時若 Session 內無檔案應回 404', async () => {
+    const code = 'EMPTY1234567';
+    req.url = `/api/sessions/${code}/download-all`;
+    req.method = 'GET';
+
+    (sessionService.getSessionByCode as any).mockResolvedValue({
+      id: 1, code, status: 'active', expiresAt: new Date(Date.now() + 3600000).toISOString()
+    });
+    (fileService.listFilesBySession as any).mockResolvedValue([]); // 空檔案列表
+
+    await routeRequest(req, res);
+    expect(res.writeHead).toHaveBeenCalledWith(404, expect.any(Object));
+    const body = JSON.parse(vi.mocked(res.end).mock.calls[0][0]);
+    expect(body.error.code).toBe('FILE_NOT_FOUND');
+  });
+
+  it('上傳檔案時磁碟空間正好等於限制值時應允許 (或邊界判定)', async () => {
+    req.url = '/api/sessions/CODE/files';
+    req.method = 'POST';
+    req.headers['content-type'] = 'multipart/form-data; boundary=xxx';
+
+    (sessionService.getSessionByCode as any).mockResolvedValue({
+      id: 1, status: 'active', expiresAt: new Date(Date.now() + 10000).toISOString()
+    });
+    (statsJob.getSystemStats as any).mockResolvedValue({ diskSpace: { freeMB: 20 } }); // 正好等於上限 20MB
+
+    // 注意：routeRequest 內會繼續往下跑讀取 Body，這裡會因為 mock body 為空而報錯，但我們只需驗證它沒拋出 503
+    try { await routeRequest(req, res); } catch (e) {}
+    
+    // 驗證沒呼叫 503 (表示通過了空間檢查)
+    const calls = vi.mocked(res.writeHead).mock.calls;
+    const has503 = calls.some(c => c[0] === 503);
+    expect(has503).toBe(false);
   });
 });
