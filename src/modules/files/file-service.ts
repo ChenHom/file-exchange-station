@@ -21,7 +21,7 @@ export type FileRecord = {
 export async function uploadFile(sessionId: number, originalName: string, mimeType: string, data: Buffer) {
   const { token, hash } = createToken();
   const fileCode = generateCode(10); // P2 定案為 10 碼
-  const safeOriginalName = basename(originalName).replace(/[^\w.\-()\s]/g, '_');
+  const safeOriginalName = basename(originalName.trim()).replace(/[^\w.\-()\s]/g, '_');
   const storedName = `${sessionId}-${Date.now()}-${token.slice(0, 12)}`;
   await writeBufferToStorage(storedName, data);
 

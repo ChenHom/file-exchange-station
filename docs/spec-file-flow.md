@@ -25,7 +25,7 @@
       "file": {
         "code": "ABCDEFGH23",
         "originalName": "photo.jpg",
-        "size": 1048576,
+        "sizeBytes": 1048576,
         "mimeType": "image/jpeg",
         "downloadCount": 0,
         "createdAt": "2026-03-29T15:00:00.000Z",
