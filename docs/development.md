@@ -8,11 +8,14 @@
 5. 存取 `http://localhost:3000/health` 確認狀態
 
 ## 目前實作核心
-- Session 與 File 的完整的增刪查改 (CRUD)
-- 安全 Token 驗證機制與 LINE 簽章校驗
-- 分段 (Multipart) 檔案上傳與串流下載
-- 自動化清理背景任務
-- ngrok 自動更新機制
+- **Session 建立與查詢 (P1)**: 支援 12 碼隨機 Code、24 小時自動過期、動態過期狀態判定。
+- **檔案交換流程 (P2)**: 
+  - 支援 10 碼隨機 File Code，對外完全隱藏數字 ID。
+  - 檔案上傳、列表、下載與 Soft Delete 閉環完成。
+  - 實作 Session 過期權限矩陣（過期後禁止變動與下載）。
+- **安全與驗證**: Token-based 檔案下載與刪除驗證、LINE Webhook 簽章校驗。
+- **自動化維運**: 背景 Job 每 15 分鐘清理過期 Session 與 Soft Deleted 實體檔案。
+- **基礎架構**: MySQL Schema 自動 Migration (目前 v8)、TypeScript 強型別支援。
 
 ## 後續優化重點
 - 增加更多的單元測試 (Unit Tests)
