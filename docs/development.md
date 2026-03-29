@@ -27,8 +27,11 @@
 - **自動化維運**: 背景 Job 每 15 分鐘清理過期 Session 與 Soft Deleted 實體檔案。
 - **基礎架構**: MySQL Schema 自動 Migration (目前 v8)、TypeScript 強型別支援。
 
-## 後續優化重點
-- 增加更多的單元測試 (Unit Tests)
-- 前端 React/Vue UI 實作
+## 測試與驗證
+- **測試框架**: 使用 Vitest 進行單元與整合測試。
+- **執行測試**: `npm test`
+- **測試範圍**:
+  - `src/jobs/__tests__/stats.test.ts`: 驗證磁碟空間監控邏輯。
+  - `tests/api-p3.test.ts`: 驗證 P3 API 路由 (ZIP 下載、系統狀態、上傳保護)。
 - 完善 LINE 互動介面 (Rich Menu, Flex Message)
 - 檔案預覽功能與快取優化
