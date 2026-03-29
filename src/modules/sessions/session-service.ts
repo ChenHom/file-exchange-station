@@ -18,11 +18,17 @@ export type SessionRecord = {
  * 建立新 Session
  * 規則：
  * - title 自動 trim，預設為空字串
+ * - title 長度上限 255，超過則報錯
  * - 過期時間固定為 24 小時 (1440 分鐘)
  */
 export async function createSession(title?: string): Promise<SessionRecord> {
   const code = generateCode(12);
-  const trimmedTitle = (title ?? '').trim().slice(0, 255);
+  const trimmedTitle = (title ?? '').trim();
+
+  if (trimmedTitle.length > 255) {
+    throw new Error('TITLE_TOO_LONG'); // 拋出特定錯誤由 route 層轉換
+  }
+
   const expiresAt = addMinutes(new Date(), 1440).toISOString().slice(0, 19).replace('T', ' ');
   
   const result = await execute(

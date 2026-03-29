@@ -85,8 +85,15 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
         throw new AppError('title must be a string', 400, 'BAD_REQUEST');
       }
 
-      const session = await createSession(body.title as string | undefined);
-      sendSuccess(res, 201, { session: sanitizeSession(session) });
+      try {
+        const session = await createSession(body.title as string | undefined);
+        sendSuccess(res, 201, { session: sanitizeSession(session) });
+      } catch (e: any) {
+        if (e.message === 'TITLE_TOO_LONG') {
+          throw new AppError('title exceeds maximum length', 400, 'BAD_REQUEST');
+        }
+        throw e;
+      }
       return;
     }
 
