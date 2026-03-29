@@ -14,6 +14,9 @@
             --text-light: #64748b;
         }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); max-width: 800px; margin: 0 auto; padding: 2rem 1rem; line-height: 1.5; }
+        
+        .sys-stats { font-size: 0.75rem; color: var(--text-light); text-align: right; margin-bottom: 1rem; }
+        
         h1 { text-align: center; color: var(--primary); margin-bottom: 2rem; }
         .card { background: var(--card); padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); margin-bottom: 1.5rem; }
         
@@ -24,9 +27,11 @@
         .status-active { background: #dcfce7; color: #166534; }
         .status-expired { background: #fee2e2; color: #991b1b; }
 
+        .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
         .file-list { list-style: none; padding: 0; }
         .file-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 0.75rem; transition: transform 0.1s; }
         .file-item:hover { border-color: var(--primary); }
+        .file-item.selected { border-color: var(--primary); background: #eff6ff; }
         .file-info { flex: 1; min-width: 0; }
         .file-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
         .file-meta { font-size: 0.75rem; color: var(--text-light); }
@@ -47,7 +52,7 @@
         #no-session-view { text-align: center; padding: 4rem 0; }
         .input-group { display: flex; gap: 0.5rem; max-width: 400px; margin: 1rem auto; }
         input[type="text"] { flex: 1; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; }
-        input[type="text"]:focus { border-color: var(--primary); ring: 2px var(--primary); }
+        input[type="text"]:focus { border-color: var(--primary); outline: 2px solid var(--primary); }
 
         .token-display { background: #fff7ed; border: 1px solid #fed7aa; padding: 1rem; border-radius: 8px; margin-top: 1rem; display: none; }
         .token-value { font-family: monospace; font-weight: 700; color: #9a3412; font-size: 1.1rem; }
@@ -56,6 +61,7 @@
     </style>
 </head>
 <body>
+    <div class="sys-stats" id="sys-stats">系統狀態檢查中...</div>
     <h1>暫存檔案交換站</h1>
 
     <div id="app">
@@ -104,7 +110,13 @@
             </div>
 
             <div class="card">
-                <h3 style="margin-top:0">檔案列表</h3>
+                <div class="list-header">
+                    <h3 style="margin:0">檔案列表</h3>
+                    <div class="actions" id="bulk-actions" style="display:none;">
+                        <button class="btn btn-primary" onclick="downloadAllZip()">📦 全部打包 (ZIP)</button>
+                        <button class="btn btn-danger" onclick="deleteSelectedFiles()" id="btn-del-sel" style="display:none;">🗑️ 刪除所選</button>
+                    </div>
+                </div>
                 <ul id="file-list" class="file-list"></ul>
                 <div id="empty-list" class="empty-state" style="display:none;">目前尚無檔案</div>
             </div>
@@ -118,6 +130,21 @@
     <script>
         let currentCode = '';
         let timer = null;
+        let selectedFiles = new Set();
+        let sessionStatus = 'active';
+
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                if (data.success) {
+                    const ds = data.data.diskSpace;
+                    document.getElementById('sys-stats').textContent = `系統儲存空間: ${ds.usedMB}MB / ${ds.totalMB}MB (${ds.usagePercent}%)`;
+                }
+            } catch (e) {
+                document.getElementById('sys-stats').textContent = '系統狀態: 未知';
+            }
+        }
 
         function updateExpiryCountdown(expiresAt) {
             const dispMeta = document.getElementById('disp-meta');
@@ -129,12 +156,14 @@
                 const diff = end - now;
 
                 if (diff <= 0) {
+                    sessionStatus = 'expired';
                     dispMeta.innerHTML = `<span style="color:var(--danger)">已過期</span>`;
                     document.getElementById('disp-status').className = 'status-badge status-expired';
                     document.getElementById('disp-status').textContent = 'Expired';
                     document.getElementById('upload-section').style.opacity = '0.5';
                     document.getElementById('upload-zone').onclick = null;
                     document.getElementById('upload-zone').style.cursor = 'not-allowed';
+                    document.getElementById('bulk-actions').style.display = 'none'; // 過期不給批次操作
                     clearInterval(timer);
                     return;
                 }
@@ -169,6 +198,7 @@
                 }
 
                 const session = result.data.session;
+                sessionStatus = session.status;
                 document.getElementById('disp-title').textContent = session.title || '未命名交換站';
                 document.getElementById('disp-status').textContent = session.status;
                 document.getElementById('disp-status').className = 'status-badge ' + (session.status === 'active' ? 'status-active' : 'status-expired');
@@ -178,17 +208,47 @@
                 document.getElementById('no-session-view').style.display = 'none';
                 document.getElementById('session-view').style.display = 'block';
                 
-                // 更新網址不換頁
                 history.pushState(null, '', `/?code=${code}`);
-                
                 refreshFiles();
             } catch (err) {
                 errorMsg.textContent = err.message;
             }
         }
 
+        function toggleSelect(code, el) {
+            if (sessionStatus !== 'active') return;
+            const chk = document.getElementById(`chk-${code}`);
+            if (selectedFiles.has(code)) {
+                selectedFiles.delete(code);
+                el.classList.remove('selected');
+                if(chk) chk.checked = false;
+            } else {
+                selectedFiles.add(code);
+                el.classList.add('selected');
+                if(chk) chk.checked = true;
+            }
+            updateBulkActions();
+        }
+
+        function updateBulkActions() {
+            if (sessionStatus !== 'active') {
+                document.getElementById('bulk-actions').style.display = 'none';
+                return;
+            }
+            const btnDelSel = document.getElementById('btn-del-sel');
+            document.getElementById('bulk-actions').style.display = 'flex';
+            if (selectedFiles.size > 0) {
+                btnDelSel.style.display = 'block';
+                btnDelSel.textContent = `🗑️ 刪除所選 (${selectedFiles.size})`;
+            } else {
+                btnDelSel.style.display = 'none';
+            }
+        }
+
         async function refreshFiles() {
             try {
+                selectedFiles.clear();
+                
                 const res = await fetch(`/api/sessions/${currentCode}/files`);
                 const result = await res.json();
                 const list = document.getElementById('file-list');
@@ -199,21 +259,37 @@
 
                 if (files.length === 0) {
                     empty.style.display = 'block';
+                    document.getElementById('bulk-actions').style.display = 'none';
                     return;
                 }
+                
                 empty.style.display = 'none';
+                updateBulkActions();
 
                 files.forEach(file => {
                     const li = document.createElement('li');
                     li.className = 'file-item';
+                    if (sessionStatus === 'active') {
+                        li.style.cursor = 'pointer';
+                        li.onclick = (e) => {
+                            if(e.target.tagName === 'BUTTON') return;
+                            toggleSelect(file.code, li);
+                        };
+                    }
+                    
+                    const checkboxHtml = sessionStatus === 'active' ? `<input type="checkbox" id="chk-${file.code}" onclick="event.stopPropagation(); toggleSelect('${file.code}', this.parentElement.parentElement)" style="cursor:pointer; margin-right:0.5rem;">` : '';
+
                     li.innerHTML = `
-                        <div class="file-info">
-                            <span class="file-name" title="${file.originalName}">${file.originalName}</span>
-                            <span class="file-meta">${(file.sizeBytes / 1024 / 1024).toFixed(2)} MB | ${file.mimeType} | 下載: ${file.downloadCount} 次</span>
+                        <div class="file-info" style="display:flex; align-items:center;">
+                            ${checkboxHtml}
+                            <div>
+                                <span class="file-name" title="${file.originalName}">${file.originalName}</span>
+                                <span class="file-meta">${(file.sizeBytes / 1024 / 1024).toFixed(2)} MB | ${file.mimeType} | 下載: ${file.downloadCount} 次</span>
+                            </div>
                         </div>
                         <div class="actions">
-                            <button class="btn btn-primary" onclick="downloadFile('${file.code}')">下載</button>
-                            <button class="btn btn-danger" onclick="deleteFile('${file.code}')">刪除</button>
+                            <button class="btn btn-primary" ${sessionStatus !== 'active' ? 'disabled' : ''} onclick="downloadFile('${file.code}')">下載</button>
+                            <button class="btn btn-danger" ${sessionStatus !== 'active' ? 'disabled' : ''} onclick="deleteFile('${file.code}')">刪除</button>
                         </div>
                     `;
                     list.appendChild(li);
@@ -223,15 +299,39 @@
             }
         }
 
+        function downloadAllZip() {
+            if (sessionStatus !== 'active') return;
+            window.open(`/api/sessions/${currentCode}/download-all`, '_blank');
+            setTimeout(refreshFiles, 2000);
+        }
+
+        async function deleteSelectedFiles() {
+            if (selectedFiles.size === 0 || sessionStatus !== 'active') return;
+            const token = prompt('請輸入 Token 以確認批次刪除：');
+            if (!token) return;
+            if (!confirm(`確定要刪除選取的 ${selectedFiles.size} 個檔案？`)) return;
+
+            let successCount = 0;
+            for (const code of selectedFiles) {
+                try {
+                    const res = await fetch(`/api/files/${code}?token=${token}`, { method: 'DELETE' });
+                    if (res.ok) successCount++;
+                } catch (e) {}
+            }
+            alert(`已成功刪除 ${successCount} 個檔案`);
+            refreshFiles();
+        }
+
         function downloadFile(fileCode) {
+            if (sessionStatus !== 'active') return;
             const token = prompt('請輸入此檔案的下載 Token：');
             if (!token) return;
             window.open(`/api/files/${fileCode}/download?token=${token}`, '_blank');
-            // 延遲刷新次數
             setTimeout(refreshFiles, 2000);
         }
 
         async function deleteFile(fileCode) {
+            if (sessionStatus !== 'active') return;
             const token = prompt('請輸入 Token 以確認刪除：');
             if (!token) return;
             if (!confirm('刪除後無法復原，確定？')) return;
@@ -251,12 +351,14 @@
         }
 
         function handleFileSelect(e) {
+            if (sessionStatus !== 'active') return;
             const file = e.target.files[0];
             if (!file) return;
             uploadFile(file);
         }
 
         function uploadFile(file) {
+            if (sessionStatus !== 'active') return;
             const container = document.getElementById('progress-container');
             const fill = document.getElementById('progress-fill');
             const percentText = document.getElementById('progress-percent');
@@ -304,8 +406,8 @@
             xhr.send(formData);
         }
 
-        // 頁面初始化：檢查 URL 是否有 code
         window.onload = () => {
+            fetchStats();
             const params = new URLSearchParams(window.location.search);
             const code = params.get('code');
             if (code) {

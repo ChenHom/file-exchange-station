@@ -1,5 +1,6 @@
 import { basename } from 'node:path';
 import { createToken, hashToken } from '../tokens/token-service.js';
+import { generateCode } from '../../shared/crypto.js';
 import { existsStoredFile, writeBufferToStorage, deleteStoredFile } from '../storage/filesystem.js';
 import { execute, queryMany, queryOne } from '../../db/query.js';
 

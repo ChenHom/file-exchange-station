@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import archiver from 'archiver';
 import { readRequestBody, readRawBody, sendJson, parseMultipart, streamFile } from './http.js';
 import { healthHandler } from './health.js';
 import { createSession, getSessionByCode, listActiveSessions, getSessionById, type SessionRecord } from '../modules/sessions/session-service.js';
@@ -10,6 +11,7 @@ import { AppError } from '../shared/errors.js';
 import { verifyToken } from '../modules/tokens/token-service.js';
 import { openFileStream } from '../modules/storage/filesystem.js';
 import { lineWebhookHandler } from './line-webhook.js';
+import { getSystemStats } from '../jobs/stats.js';
 
 function methodNotAllowed(res: ServerResponse): void {
   sendError(res, 405, 'METHOD_NOT_ALLOWED', 'Method Not Allowed');
@@ -30,7 +32,6 @@ function sendError(res: ServerResponse, statusCode: number, code: string, messag
 function sanitizeSession(session: SessionRecord) {
   const { id, ...rest } = session;
   
-  // 動態判定過期狀態：若資料庫仍是 active，但目前時間已過，則顯示為 expired
   const now = new Date();
   const expiresAt = new Date(session.expiresAt);
   if (rest.status === 'active' && now > expiresAt) {
@@ -50,7 +51,6 @@ function sanitizeFile(file: any) {
 
 /**
  * 檢查 Session 是否為 Active
- * 若已過期或已刪除，在執行變動操作(上傳/下載/刪除)時應禁止。
  */
 function isSessionActive(session: SessionRecord): boolean {
   if (session.status !== 'active') return false;
@@ -79,6 +79,13 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
       return;
     }
 
+    if (url.pathname === '/api/stats') {
+      if (req.method !== 'GET') return methodNotAllowed(res);
+      const stats = await getSystemStats();
+      sendSuccess(res, 200, stats);
+      return;
+    }
+
     if (url.pathname === '/') {
       if (req.method !== 'GET') return methodNotAllowed(res);
       try {
@@ -99,7 +106,6 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
     if (url.pathname === '/api/sessions' && req.method === 'POST') {
       const body = await parseJsonBody(req);
       
-      // 驗證 title 型別 (若有提供)
       if (body.title !== undefined && typeof body.title !== 'string') {
         throw new AppError('title must be a string', 400, 'BAD_REQUEST');
       }
@@ -116,10 +122,47 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
       return;
     }
 
-    // GET /api/sessions - 列出活動中 (MVP 僅供內部/管理用)
+    // GET /api/sessions - 列出活動中
     if (url.pathname === '/api/sessions' && req.method === 'GET') {
       const sessions = await listActiveSessions();
       sendSuccess(res, 200, { sessions: sessions.map(sanitizeSession) });
+      return;
+    }
+
+    // Session zip download: /api/sessions/:code/download-all
+    const sessionZipMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/download-all$/);
+    if (sessionZipMatch) {
+      if (req.method !== 'GET') return methodNotAllowed(res);
+      const code = sessionZipMatch[1];
+      if (!code) throw new AppError('Invalid session code', 400, 'BAD_REQUEST');
+      
+      const session = await getSessionByCode(code);
+      if (!session) throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
+      
+      if (!isSessionActive(session)) {
+        throw new AppError('Session is no longer active', 403, 'FORBIDDEN');
+      }
+
+      const files = await listFilesBySession(session.id);
+      if (files.length === 0) {
+        throw new AppError('No files to download', 404, 'FILE_NOT_FOUND');
+      }
+
+      res.writeHead(200, {
+        'Content-Type': 'application/zip',
+        'Content-Disposition': `attachment; filename="session-${code}.zip"`
+      });
+
+      const archive = archiver('zip', { zlib: { level: 5 } });
+      archive.on('error', (err) => { throw err; });
+      archive.pipe(res);
+
+      for (const file of files) {
+        archive.append(openFileStream(file.storedName), { name: file.originalName });
+        await incrementDownloadCount(file.id);
+      }
+
+      await archive.finalize();
       return;
     }
 
@@ -154,7 +197,6 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
       }
 
       if (req.method === 'POST') {
-        // Expired session 禁止上傳
         if (!isSessionActive(session)) {
           throw new AppError('Session is no longer active', 403, 'FORBIDDEN');
         }
@@ -163,6 +205,13 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
         if (!contentType.includes('multipart/form-data')) {
           throw new AppError('Content-Type must be multipart/form-data', 400, 'BAD_REQUEST');
         }
+        
+        // 檢查檔案總大小 (避免硬碟爆滿)
+        const stats = await getSystemStats();
+        if (stats.diskSpace.freeMB < env.MAX_FILE_SIZE_MB) {
+          throw new AppError('Insufficient server storage', 503, 'STORAGE_FULL');
+        }
+
         const body = await readRawBody(req, env.MAX_FILE_SIZE_MB * 1024 * 1024 + 10_000);
         const parts = parseMultipart(body, contentType);
         const filePart = parts.get('file');

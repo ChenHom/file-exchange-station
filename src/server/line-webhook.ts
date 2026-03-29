@@ -39,7 +39,7 @@ async function handleCommand(text: string, replyToken: string, userId?: string):
 
   if (command === '!new') {
     const title = args.join(' ') || '未命名交換站';
-    const session = await createSession(title, env.DEFAULT_TTL_MINUTES);
+    const session = await createSession(title);
     const link = `${env.APP_BASE_URL}?code=${session.code}`;
     
     await recordEvent(session.id, null, 'line_command_create', { userId, text });
