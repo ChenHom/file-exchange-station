@@ -278,7 +278,7 @@
                 }
             });
 
-            // 檔案列表點擊委派 (處理下載與刪除)
+            // 檔案列表點擊委派 (處理下載)
             document.getElementById('file-list').addEventListener('click', (ev) => {
                 const btn = ev.target.closest('button');
                 if (!btn) return;
@@ -286,8 +286,6 @@
                 const fileCode = btn.dataset.code;
                 if (btn.classList.contains('btn-download')) {
                     downloadFile(fileCode);
-                } else if (btn.classList.contains('btn-delete')) {
-                    deleteFile(fileCode);
                 }
             });
             
@@ -599,7 +597,6 @@
                         </div>
                         <div style="display:flex; gap:0.5rem;">
                             <button class="btn btn-primary btn-sm btn-download" data-code="${file.code}">下載</button>
-                            <button class="btn btn-danger btn-sm btn-delete" data-code="${file.code}">刪除</button>
                         </div>
                     `;
                     list.appendChild(li);
@@ -611,18 +608,36 @@
 
         // --- 工具函式 ---
 
-        function copyToClipboard(id) {
+        async function copyToClipboard(id) {
             const input = document.getElementById(id);
-            input.select();
-            document.execCommand('copy');
+            const textToCopy = input.value;
             const btn = input.nextElementSibling;
             const originalText = btn.textContent;
-            btn.textContent = '已複製!';
-            btn.classList.replace('btn-outline', 'btn-primary');
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.classList.replace('btn-primary', 'btn-outline');
-            }, 2000);
+
+            try {
+                // 優先使用現代 API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(textToCopy);
+                } else {
+                    // 降級方案
+                    input.select();
+                    document.execCommand('copy');
+                }
+                
+                btn.textContent = '已複製!';
+                btn.classList.replace('btn-outline', 'btn-primary');
+            } catch (err) {
+                console.error('複製失敗:', err);
+                // 極端情況下的手動選擇提示
+                input.style.display = 'block';
+                input.select();
+                alert('您的瀏覽器不支援自動複製，請手動選取文字後按複製。');
+            } finally {
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.replace('btn-primary', 'btn-outline');
+                }, 2000);
+            }
         }
 
         function updateExpiryCountdown(expiresAt) {
@@ -654,21 +669,6 @@
 
         function downloadFile(fileCode) {
             window.open(`/api/files/${fileCode}/download`, '_blank');
-        }
-
-        async function deleteFile(fileCode) {
-            if (!confirm('確定要刪除此檔案？')) return;
-
-            try {
-                const res = await fetch(`/api/files/${fileCode}`, { method: 'DELETE' });
-                const result = await res.json();
-                if (result.success) {
-                    alert('已刪除');
-                    refreshFiles();
-                } else {
-                    alert('失敗: ' + result.error.message);
-                }
-            } catch (consoleErr) { alert('系統錯誤: ' + consoleErr); }
         }
 
         function downloadAllZip() {
