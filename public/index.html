@@ -335,8 +335,25 @@
                 return;
             }
             
-            // 將新選取的檔案加入現有隊列 (支援多次選取)
-            pendingFiles = [...pendingFiles, ...Array.from(files)];
+            const newFiles = Array.from(files);
+            const currentNames = new Set(pendingFiles.map(f => f.name));
+            
+            // 過濾掉重複檔名的檔案
+            const filteredNewFiles = newFiles.filter(file => {
+                if (currentNames.has(file.name)) {
+                    console.warn(`忽略重複檔案: ${file.name}`);
+                    return false;
+                }
+                return true;
+            });
+
+            if (filteredNewFiles.length === 0 && newFiles.length > 0) {
+                alert('選取的檔案皆已在待上傳清單中。');
+                return;
+            }
+
+            // 將過濾後的新選取檔案加入現有隊列
+            pendingFiles = [...pendingFiles, ...filteredNewFiles];
             renderPreviewList();
             
             document.getElementById('upload-preview').style.display = 'block';
