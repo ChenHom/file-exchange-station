@@ -277,6 +277,11 @@
 
         // --- 核心邏輯 ---
 
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (files.length > 0) handleUpload(files);
+        }
+
         async function handleUpload(files) {
             // 如果已在 session-view，則上傳到當前 session
             let targetCode = (document.getElementById('session-view').style.display === 'block') ? currentCode : document.getElementById('code-input').value.trim();
