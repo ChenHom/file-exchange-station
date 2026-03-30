@@ -516,8 +516,14 @@
         }
 
         async function handleViewSession() {
-            const code = document.getElementById('code-input').value.trim();
-            if (!code) return;
+            const codeInput = document.getElementById('code-input');
+            const code = codeInput.value.trim();
+            if (!code) {
+                const errorMsg = document.getElementById('error-msg');
+                errorMsg.textContent = '請輸入 12 碼交換代碼';
+                codeInput.focus();
+                return;
+            }
             loadSession(code);
         }
 
