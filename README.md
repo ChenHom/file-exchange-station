@@ -39,6 +39,7 @@ npm run dev        # 開發模式 (tsx watch)
 npm run typecheck  # 型別檢查
 npm run build      # 編譯 TypeScript
 npm run start      # 啟動編譯後的專案
+npm run cleanup    # 手動執行過期檔案清理任務
 ```
 
 ## API 規格
@@ -58,8 +59,8 @@ npm run start      # 啟動編譯後的專案
 - `GET /api/sessions/:code/files` - 列出交換站內的檔案
 - `GET /api/sessions/:code/download-all` - 一鍵打包下載所有檔案 (ZIP, P3)
 - `POST /api/sessions/:code/files` - 上傳檔案 (Multipart, 具備容量保護)
-- `GET /api/files/:code/download?token=xxx` - 下載檔案 (需驗證 Token)
-- `DELETE /api/files/:code?token=xxx` - 刪除檔案 (需驗證 Token)
+- `GET /api/files/:code/download` - 下載檔案 (P3 簡化版)
+- `DELETE /api/files/:code` - 刪除檔案 (P3 簡化版)
 - `POST /webhooks/line` - LINE Webhook 接收端
 
 ### 安全與維運 (P3)

@@ -11,6 +11,7 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint:html": "eslint public/index.html",
+    "cleanup": "tsx scripts/cleanup.ts",
     "test": "vitest run"
   },
   "engines": {
