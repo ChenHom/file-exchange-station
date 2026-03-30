@@ -158,24 +158,24 @@
                         <label>交換代碼 (Session Code)</label>
                         <div class="copy-group">
                             <input type="text" id="res-code" readonly>
-                            <button class="btn btn-sm btn-outline" onclick="copyToClipboard('res-code')">複製</button>
+                            <button class="btn btn-sm btn-outline" id="btn-copy-code">複製</button>
                         </div>
                     </div>
                     <div class="share-item">
                         <label>分享連結 (Share URL)</label>
                         <div class="copy-group">
                             <input type="text" id="res-url" readonly>
-                            <button class="btn btn-sm btn-outline" onclick="copyToClipboard('res-url')">複製</button>
+                            <button class="btn btn-sm btn-outline" id="btn-copy-url">複製</button>
                         </div>
                     </div>
                     <div class="share-item">
                         <label>下載/刪除 Token (請妥善保存，僅顯示一次)</label>
                         <div class="copy-group">
                             <input type="text" id="res-token" readonly style="color:var(--danger); font-weight: 800;">
-                            <button class="btn btn-sm btn-outline" onclick="copyToClipboard('res-token')">複製</button>
+                            <button class="btn btn-sm btn-outline" id="btn-copy-token">複製</button>
                         </div>
                     </div>
-                    <button class="btn btn-primary" style="width:100%; margin-top:1rem;" onclick="loadSession(document.getElementById('res-code').value)">
+                    <button class="btn btn-primary" style="width:100%; margin-top:1rem;" id="btn-manage-session">
                         管理此交換站檔案
                     </button>
                 </div>
@@ -184,8 +184,8 @@
 
                 <div class="input-group">
                     <div class="input-row">
-                        <input type="text" id="code-input" placeholder="請輸入 12 碼交換代碼" maxlength="12" onkeydown="if(event.key==='Enter') handleViewSession()">
-                        <button class="btn btn-primary" onclick="handleViewSession()">進入交換站</button>
+                        <input type="text" id="code-input" placeholder="請輸入 12 碼交換代碼" maxlength="12">
+                        <button class="btn btn-primary" id="btn-view-session">進入交換站</button>
                     </div>
                 </div>
 
@@ -208,18 +208,18 @@
                 <div class="list-header" style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h3 style="margin:0">檔案列表</h3>
                     <div id="session-actions">
-                        <button class="btn btn-primary btn-sm" onclick="downloadAllZip()">打包下載全部 (ZIP)</button>
+                        <button class="btn btn-primary btn-sm" id="btn-download-all">打包下載全部 (ZIP)</button>
                     </div>
                 </div>
 
                 <ul id="file-list" class="file-list"></ul>
                 <div id="empty-list" class="empty-state" style="display:none;">
                     <p>目前尚無檔案</p>
-                    <button class="btn btn-outline btn-sm" onclick="showHomepage()">立即上傳</button>
+                    <button class="btn btn-outline btn-sm btn-home">立即上傳</button>
                 </div>
 
                 <div style="text-align: center; margin-top: 2rem;">
-                    <button class="btn btn-outline" onclick="showHomepage()">← 返回首頁</button>
+                    <button class="btn btn-outline btn-home">← 返回首頁</button>
                 </div>
             </div>
         </div>
@@ -234,6 +234,34 @@
         window.onload = () => {
             fetchStats();
             setupDragAndDrop();
+            
+            // 綁定按鈕事件
+            document.getElementById('btn-view-session').addEventListener('click', handleViewSession);
+            document.getElementById('code-input').addEventListener('keydown', (ev) => {
+                if (ev.key === 'Enter') handleViewSession();
+            });
+            document.querySelectorAll('.btn-home').forEach(btn => btn.addEventListener('click', showHomepage));
+            document.getElementById('btn-copy-code').addEventListener('click', () => copyToClipboard('res-code'));
+            document.getElementById('btn-copy-url').addEventListener('click', () => copyToClipboard('res-url'));
+            document.getElementById('btn-copy-token').addEventListener('click', () => copyToClipboard('res-token'));
+            document.getElementById('btn-manage-session').addEventListener('click', () => {
+                const code = document.getElementById('res-code').value;
+                if (code) loadSession(code);
+            });
+            document.getElementById('btn-download-all').addEventListener('click', downloadAllZip);
+
+            // 檔案列表點擊委派 (處理下載與刪除)
+            document.getElementById('file-list').addEventListener('click', (ev) => {
+                const btn = ev.target.closest('button');
+                if (!btn) return;
+                
+                const fileCode = btn.dataset.code;
+                if (btn.classList.contains('btn-download')) {
+                    downloadFile(fileCode);
+                } else if (btn.classList.contains('btn-delete')) {
+                    deleteFile(fileCode);
+                }
+            });
             
             const params = new URLSearchParams(window.location.search);
             const code = params.get('code');
@@ -253,9 +281,9 @@
             const zone = document.getElementById('upload-zone');
             
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                zone.addEventListener(eventName, e => {
-                    e.preventDefault();
-                    e.stopPropagation();
+                zone.addEventListener(eventName, ev => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
                 }, false);
             });
 
@@ -267,8 +295,8 @@
                 zone.addEventListener(eventName, () => zone.classList.remove('dragover'), false);
             });
 
-            zone.addEventListener('drop', e => {
-                const files = e.dataTransfer.files;
+            zone.addEventListener('drop', ev => {
+                const files = ev.dataTransfer.files;
                 if (files.length > 0) handleUpload(files);
             }, false);
 
@@ -278,17 +306,20 @@
 
         // --- 核心邏輯 ---
 
-        function handleFileSelect(e) {
-            const files = e.target.files;
+        function handleFileSelect(ev) {
+            const files = ev.target.files;
             if (files.length > 0) handleUpload(files);
         }
 
         async function handleUpload(files) {
+            if (sessionStatus !== 'active') {
+                alert('此交換站已過期，無法上傳檔案。');
+                return;
+            }
             // 如果已在 session-view，則上傳到當前 session
             let targetCode = (document.getElementById('session-view').style.display === 'block') ? currentCode : document.getElementById('code-input').value.trim();
             
             const errorMsg = document.getElementById('error-msg');
-            const resultBox = document.getElementById('upload-result-box');
             const container = document.getElementById('progress-container');
             const statusText = document.getElementById('progress-text');
             
@@ -336,9 +367,9 @@
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `/api/sessions/${code}/files`, true);
 
-                xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        const pct = Math.round((e.loaded / e.total) * 100);
+                xhr.upload.onprogress = (ev) => {
+                    if (ev.lengthComputable) {
+                        const pct = Math.round((ev.loaded / ev.total) * 100);
                         fill.style.width = pct + '%';
                         percentText.textContent = pct + '%';
                         statusText.textContent = `上傳中 (${file.name}): ${pct}%`;
@@ -347,11 +378,10 @@
 
                 xhr.onload = () => {
                     if (xhr.status === 201) {
-                        const result = JSON.parse(xhr.responseText);
-                        
                         // 更新結果資訊
                         document.getElementById('res-code').value = code;
                         document.getElementById('res-url').value = `${window.location.origin}/?code=${code}`;
+                        const result = JSON.parse(xhr.responseText);
                         document.getElementById('res-token').value = result.data.downloadToken;
                         
                         // 顯示結果區塊 (如果是從首頁上傳)
@@ -450,14 +480,14 @@
                             <span class="file-meta">${(file.sizeBytes / 1024 / 1024).toFixed(2)} MB | 下載: ${file.downloadCount} 次</span>
                         </div>
                         <div style="display:flex; gap:0.5rem;">
-                            <button class="btn btn-primary btn-sm" onclick="downloadFile('${file.code}')">下載</button>
-                            <button class="btn btn-danger btn-sm" onclick="deleteFile('${file.code}')">刪除</button>
+                            <button class="btn btn-primary btn-sm btn-download" data-code="${file.code}">下載</button>
+                            <button class="btn btn-danger btn-sm btn-delete" data-code="${file.code}">刪除</button>
                         </div>
                     `;
                     list.appendChild(li);
                 });
-            } catch (err) {
-                console.error('Failed to fetch files:', err);
+            } catch (consoleErr) {
+                console.error('Failed to fetch files:', consoleErr);
             }
         }
 
@@ -524,7 +554,7 @@
                 } else {
                     alert('失敗: ' + result.error.message);
                 }
-            } catch (err) { alert('系統錯誤'); }
+            } catch (consoleErr) { alert('系統錯誤: ' + consoleErr); }
         }
 
         function downloadAllZip() {
@@ -539,7 +569,7 @@
                     const ds = result.data.diskSpace;
                     document.getElementById('sys-stats').textContent = `儲存空間: ${ds.usedMB}MB / ${ds.totalMB}MB (${ds.usagePercent}%)`;
                 }
-            } catch (e) { document.getElementById('sys-stats').textContent = ''; }
+            } catch (consoleErr) { console.error('Stats fetch failed', consoleErr); }
         }
     </script>
 </body>
