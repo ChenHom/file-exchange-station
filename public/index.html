@@ -382,8 +382,8 @@
         async function startUploadProcess() {
             if (pendingFiles.length === 0) return;
             
-            // 如果已在 session-view，則上傳到當前 session
-            let targetCode = (document.getElementById('session-view').style.display === 'block') ? currentCode : document.getElementById('code-input').value.trim();
+            const isSessionView = document.getElementById('session-view').style.display === 'block';
+            let targetCode = isSessionView ? currentCode : document.getElementById('code-input').value.trim();
             
             const errorMsg = document.getElementById('error-msg');
             const container = document.getElementById('progress-container');
@@ -406,6 +406,8 @@
                     const result = await res.json();
                     if (!result.success) throw new Error(result.error?.message || '建立空間失敗');
                     targetCode = result.data.session.code;
+                    // 同步更新全域變數，確保後續操作（如 refreshFiles）正常
+                    currentCode = targetCode;
                 }
 
                 for (let i = 0; i < pendingFiles.length; i++) {
@@ -417,7 +419,13 @@
                 statusText.textContent = `成功上傳 ${pendingFiles.length} 個檔案！`;
                 document.getElementById('progress-fill').style.background = 'var(--success)';
                 pendingFiles = [];
+                
+                // 如果在 session-view，上傳完畢後重整列表
+                if (isSessionView) {
+                    refreshFiles();
+                }
             } catch (err) {
+                console.error('[Upload Error]', err);
                 errorMsg.textContent = err.message;
                 container.style.display = 'none';
             }
@@ -431,6 +439,7 @@
                 
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `/api/sessions/${code}/files`, true);
+                xhr.timeout = 120000; // 2 分鐘超時
 
                 xhr.upload.onprogress = (ev) => {
                     if (ev.lengthComputable) {
@@ -442,9 +451,15 @@
                 };
 
                 xhr.onload = () => {
-                    if (xhr.status === 201) {
+                    try {
+                        let response;
                         try {
-                            JSON.parse(xhr.responseText);
+                            response = xhr.responseText ? JSON.parse(xhr.responseText) : {};
+                        } catch {
+                            response = { success: false, error: { message: '伺服器回應格式錯誤' } };
+                        }
+
+                        if (xhr.status === 201) {
                             const baseUrl = window.location.origin + window.location.pathname.replace(/\/$/, '');
                             
                             document.getElementById('res-code').value = code;
@@ -454,23 +469,27 @@
                             if (!isSessionView) {
                                 const rb = document.getElementById('upload-result-box');
                                 rb.style.display = 'block';
-                                rb.scrollIntoView({ behavior: 'smooth' });
-                            }
-                            
-                            if (isSessionView) {
-                                refreshFiles();
+                                // 安全的捲動處理
+                                if (typeof rb.scrollIntoView === 'function') {
+                                    try {
+                                        rb.scrollIntoView({ behavior: 'smooth' });
+                                    } catch {
+                                        rb.scrollIntoView(); // 降級處理
+                                    }
+                                }
                             }
                             resolve();
-                        } catch (parseErr) {
-                            reject(new Error(`解析回應失敗: ${parseErr.message}`));
+                        } else {
+                            const msg = response.error?.message || `上傳失敗 (HTTP ${xhr.status})`;
+                            reject(new Error(`檔案 ${file.name} ${msg}`));
                         }
-                    } else {
-                        const result = JSON.parse(xhr.responseText);
-                        reject(new Error(`檔案 ${file.name} 上傳失敗: ` + (result.error?.message || '未知錯誤')));
+                    } catch (e) {
+                        reject(new Error(`檔案 ${file.name} 發生非預期錯誤: ${e.message}`));
                     }
                 };
 
                 xhr.onerror = () => reject(new Error(`檔案 ${file.name} 網路連線失敗`));
+                xhr.ontimeout = () => reject(new Error(`檔案 ${file.name} 上傳超時`));
 
                 const formData = new FormData();
                 formData.append('file', file);
