@@ -93,12 +93,19 @@
         .token-display { 
             background: #f0fdf4; border: 1px solid #bbf7d0; 
             padding: 1.5rem; border-radius: 12px; margin-top: 1.5rem; 
-            display: none; 
+            display: none; overflow: hidden;
         }
         .share-item { margin-bottom: 1rem; }
-        .share-item label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-bottom: 0.25rem; }
-        .copy-group { display: flex; gap: 0.5rem; }
-        .copy-group input { background: #fff; }
+        .share-item label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-bottom: 0.5rem; }
+        .copy-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .copy-group input { flex: 1; min-width: 0; background: #fff; }
+
+        @media (max-width: 600px) {
+            .copy-group input { display: none; }
+            .copy-group .btn { width: 100%; padding: 1rem; font-size: 1.1rem; }
+            .card { padding: 1.25rem; }
+            .upload-zone { padding: 2rem 1rem; }
+        }
 
         .session-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.5rem; }
         .session-title { font-size: 1.5rem; font-weight: 800; margin: 0; color: var(--text); }
