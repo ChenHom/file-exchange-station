@@ -83,6 +83,11 @@
         .progress-bar { width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; }
         .progress-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.1s; }
         
+        .upload-preview { margin-top: 1.5rem; display: none; border: 1px solid var(--border); border-radius: 12px; padding: 1rem; background: #fdfdfd; }
+        .preview-list { list-style: none; padding: 0; margin: 0 0 1rem 0; }
+        .preview-item { display: flex; justify-content: space-between; font-size: 0.875rem; padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9; }
+        .preview-item:last-child { border-bottom: none; }
+        
         .token-display { 
             background: #f0fdf4; border: 1px solid #bbf7d0; 
             padding: 1.5rem; border-radius: 12px; margin-top: 1.5rem; 
@@ -140,6 +145,15 @@
                     <p>拖曳檔案至此或點擊上傳</p>
                     <small style="color:var(--text-light)">單檔上限 20MB | 自動建立 24h 暫存空間</small>
                     <input type="file" id="file-input" style="display:none;">
+                </div>
+
+                <div id="upload-preview" class="upload-preview">
+                    <h4 style="margin: 0 0 0.75rem 0;">待上傳檔案</h4>
+                    <ul id="preview-list" class="preview-list"></ul>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn btn-primary" style="flex:1" id="btn-start-upload">開始上傳</button>
+                        <button class="btn btn-outline" id="btn-cancel-upload">取消</button>
+                    </div>
                 </div>
 
                 <div id="progress-container" class="upload-progress-container">
@@ -222,6 +236,7 @@
         let currentCode = '';
         let timer = null;
         let sessionStatus = 'active';
+        let pendingFiles = [];
 
         // --- 初始化 ---
         window.onload = () => {
@@ -241,6 +256,10 @@
                 if (code) loadSession(code);
             });
             document.getElementById('btn-download-all').addEventListener('click', downloadAllZip);
+
+            // 上傳控制
+            document.getElementById('btn-start-upload').addEventListener('click', startUploadProcess);
+            document.getElementById('btn-cancel-upload').addEventListener('click', clearUploadQueue);
 
             // 檔案列表點擊委派 (處理下載與刪除)
             document.getElementById('file-list').addEventListener('click', (ev) => {
@@ -289,44 +308,65 @@
 
             zone.addEventListener('drop', ev => {
                 const files = ev.dataTransfer.files;
-                if (files.length > 0) handleUpload(files);
+                if (files.length > 0) handleFileSelection(files);
             }, false);
 
             zone.onclick = () => document.getElementById('file-input').click();
-            document.getElementById('file-input').addEventListener('change', handleFileSelect);
+            document.getElementById('file-input').addEventListener('change', (ev) => {
+                if (ev.target.files.length > 0) handleFileSelection(ev.target.files);
+            });
         }
 
         // --- 核心邏輯 ---
 
-        function handleFileSelect(ev) {
-            const files = ev.target.files;
-            if (files.length > 0) handleUpload(files);
-        }
-
-        async function handleUpload(files) {
+        function handleFileSelection(files) {
             if (sessionStatus !== 'active') {
                 alert('此交換站已過期，無法上傳檔案。');
                 return;
             }
+            
+            pendingFiles = Array.from(files);
+            const preview = document.getElementById('upload-preview');
+            const list = document.getElementById('preview-list');
+            
+            list.innerHTML = '';
+            pendingFiles.forEach(file => {
+                const li = document.createElement('li');
+                li.className = 'preview-item';
+                li.innerHTML = `<span>${file.name}</span> <span>${(file.size / 1024 / 1024).toFixed(2)} MB</span>`;
+                list.appendChild(li);
+            });
+            
+            preview.style.display = 'block';
+            document.getElementById('upload-result-box').style.display = 'none';
+            document.getElementById('progress-container').style.display = 'none';
+        }
+
+        function clearUploadQueue() {
+            pendingFiles = [];
+            document.getElementById('upload-preview').style.display = 'none';
+            document.getElementById('file-input').value = '';
+        }
+
+        async function startUploadProcess() {
+            if (pendingFiles.length === 0) return;
+            
             // 如果已在 session-view，則上傳到當前 session
             let targetCode = (document.getElementById('session-view').style.display === 'block') ? currentCode : document.getElementById('code-input').value.trim();
             
             const errorMsg = document.getElementById('error-msg');
             const container = document.getElementById('progress-container');
             const statusText = document.getElementById('progress-text');
+            const preview = document.getElementById('upload-preview');
             
             errorMsg.textContent = '';
+            preview.style.display = 'none';
             container.style.display = 'block';
+            document.getElementById('progress-fill').style.background = 'var(--primary)';
             statusText.textContent = '正在初始化上傳...';
-            
-            const isSessionView = document.getElementById('session-view').style.display === 'block';
-            if (!isSessionView) {
-                resultBox.style.display = 'none';
-            }
 
             try {
                 if (!targetCode) {
-                    // 自動建立 Session
                     const res = await fetch('/api/sessions', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -337,17 +377,15 @@
                     targetCode = result.data.session.code;
                 }
 
-                // 批次處理上傳
-                const fileArray = Array.from(files);
-                for (let i = 0; i < fileArray.length; i++) {
-                    const file = fileArray[i];
-                    statusText.textContent = `正在準備第 ${i+1}/${fileArray.length} 個檔案: ${file.name}`;
+                for (let i = 0; i < pendingFiles.length; i++) {
+                    const file = pendingFiles[i];
+                    statusText.textContent = `正在上傳 (${i+1}/${pendingFiles.length}): ${file.name}`;
                     await performUpload(targetCode, file);
                 }
                 
-                // 全部完成後的提示
-                statusText.textContent = `共 ${fileArray.length} 個檔案上傳完成！`;
+                statusText.textContent = `成功上傳 ${pendingFiles.length} 個檔案！`;
                 document.getElementById('progress-fill').style.background = 'var(--success)';
+                pendingFiles = [];
             } catch (err) {
                 errorMsg.textContent = err.message;
                 container.style.display = 'none';
@@ -375,14 +413,12 @@
                 xhr.onload = () => {
                     if (xhr.status === 201) {
                         try {
-                            const result = JSON.parse(xhr.responseText);
+                            JSON.parse(xhr.responseText);
                             const baseUrl = window.location.origin + window.location.pathname.replace(/\/$/, '');
                             
-                            // 更新結果資訊
                             document.getElementById('res-code').value = code;
                             document.getElementById('res-url').value = `${baseUrl}/?code=${code}`;
                             
-                            // 顯示結果區塊 (如果是從首頁上傳)
                             const isSessionView = document.getElementById('session-view').style.display === 'block';
                             if (!isSessionView) {
                                 const rb = document.getElementById('upload-result-box');
@@ -403,9 +439,7 @@
                     }
                 };
 
-                xhr.onerror = () => {
-                    reject(new Error(`檔案 ${file.name} 網路連線失敗`));
-                };
+                xhr.onerror = () => reject(new Error(`檔案 ${file.name} 網路連線失敗`));
 
                 const formData = new FormData();
                 formData.append('file', file);
