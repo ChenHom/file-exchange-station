@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Readable } from 'node:stream';
 
 vi.mock('../src/config/env.js', () => ({
   env: { 
@@ -54,19 +55,18 @@ describe('API P3 Integration (Mocked)', () => {
   });
 
   it('POST /api/sessions 應成功建立 Session', async () => {
-    req.url = '/api/sessions';
-    req.method = 'POST';
-    req.on = vi.fn((event, cb) => {
-      if (event === 'data') cb(Buffer.from(JSON.stringify({ title: 'Test Session' })));
-      if (event === 'end') cb();
-      return req;
-    });
+    const body = JSON.stringify({ title: 'Test Session' });
+    const reqStream = Readable.from([Buffer.from(body)]) as any;
+    reqStream.url = '/api/sessions';
+    reqStream.method = 'POST';
+    reqStream.headers = { 'content-length': String(body.length) };
+    reqStream.socket = { remoteAddress: '127.0.0.1' };
 
     (sessionService.createSession as any).mockResolvedValue({
       id: 1, code: 'NEWCODE12345', title: 'Test Session', status: 'active', expiresAt: '2026-03-31T00:00:00Z'
     });
 
-    await routeRequest(req, res);
+    await routeRequest(reqStream, res);
     expect(res.writeHead).toHaveBeenCalledWith(201, expect.any(Object));
   });
 
