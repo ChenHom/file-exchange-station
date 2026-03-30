@@ -145,7 +145,7 @@
             <div class="card">
                 <div id="upload-zone" class="upload-zone">
                     <p>拖曳檔案至此或點擊上傳</p>
-                    <small style="color:var(--text-light)">單檔上限 20MB | 自動建立 24h 暫存空間</small>
+                    <small style="color:var(--text-light)">單檔上限 100MB | 自動建立 24h 暫存空間</small>
                     <input type="file" id="file-input" style="display:none;">
                 </div>
 
@@ -470,13 +470,16 @@
                 xhr.onload = () => {
                     try {
                         let response;
+                        let parseSuccess = true;
                         try {
                             response = xhr.responseText ? JSON.parse(xhr.responseText) : {};
                         } catch {
-                            response = { success: false, error: { message: '伺服器回應格式錯誤' } };
+                            parseSuccess = false;
+                            const excerpt = xhr.responseText ? xhr.responseText.substring(0, 100) : '無內容';
+                            response = { success: false, error: { message: `回應格式錯誤 (HTTP ${xhr.status}): ${excerpt}...` } };
                         }
 
-                        if (xhr.status === 201) {
+                        if (xhr.status === 201 && parseSuccess) {
                             const baseUrl = window.location.origin + window.location.pathname.replace(/\/$/, '');
                             
                             document.getElementById('res-code').value = code;

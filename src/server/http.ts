@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { AppError } from '../shared/errors.js';
 
 export type RouteHandler = (req: IncomingMessage, res: ServerResponse) => void | Promise<void>;
 
@@ -17,7 +18,7 @@ export async function readRawBody(req: IncomingMessage, limitBytes = 100_000_000
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
     total += buffer.length;
     if (total > limitBytes) {
-      throw new Error('Request body too large');
+      throw new AppError('File size exceeds limit', 413, 'PAYLOAD_TOO_LARGE');
     }
     chunks.push(buffer);
   }
