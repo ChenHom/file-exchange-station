@@ -139,7 +139,7 @@
                 <div id="upload-zone" class="upload-zone">
                     <p>拖曳檔案至此或點擊上傳</p>
                     <small style="color:var(--text-light)">單檔上限 20MB | 自動建立 24h 暫存空間</small>
-                    <input type="file" id="file-input" style="display:none;" onchange="handleFileSelect(event)">
+                    <input type="file" id="file-input" style="display:none;">
                 </div>
 
                 <div id="progress-container" class="upload-progress-container">
@@ -273,6 +273,7 @@
             }, false);
 
             zone.onclick = () => document.getElementById('file-input').click();
+            document.getElementById('file-input').addEventListener('change', handleFileSelect);
         }
 
         // --- 核心邏輯 ---

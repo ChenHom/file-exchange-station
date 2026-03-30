@@ -2,6 +2,7 @@
   "name": "file-exchange-station",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Local-first temporary file exchange station with Node.js, TypeScript, MySQL, ngrok, and LINE Bot integration.",
   "main": "dist/index.js",
   "scripts": {
@@ -9,6 +10,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint:html": "eslint public/index.html",
     "test": "vitest run"
   },
   "engines": {
@@ -20,8 +22,12 @@
     "mysql2": "^3.14.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/archiver": "^7.0.0",
     "@types/node": "^24.12.0",
+    "eslint": "^10.1.0",
+    "eslint-plugin-html": "^8.1.4",
+    "globals": "^17.4.0",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vitest": "^4.1.2"
