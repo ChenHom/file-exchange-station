@@ -299,10 +299,7 @@
         };
 
         function showHomepage() {
-            document.getElementById('homepage-view').style.display = 'block';
-            document.getElementById('session-view').style.display = 'none';
-            document.getElementById('error-msg').textContent = '';
-            history.pushState(null, '', '/');
+            window.location.href = '/';
         }
 
         function setupDragAndDrop() {
