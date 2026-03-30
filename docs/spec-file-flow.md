@@ -30,8 +30,7 @@
         "downloadCount": 0,
         "createdAt": "2026-03-29T15:00:00.000Z",
         "updatedAt": "2026-03-29T15:00:00.000Z"
-      },
-      "downloadToken": "secure_download_token"
+      }
     }
   }
   ```
@@ -54,13 +53,11 @@
 ## 3. 檔案下載 (`GET /api/files/:code/download`)
 
 ### Request
-- **Endpoint**: `GET /api/files/:code/download?token=...`
-- **Authentication**: 需帶入正確的 `token`。
+- **Endpoint**: `GET /api/files/:code/download`
 
 ### Behavior
 - **Success**: 回傳檔案串流 (Stream)，設定正確的 `Content-Disposition` 與 `Content-Type`。
 - **Failure**:
-  - Token 錯誤/過期 -> `403 FORBIDDEN`
   - 檔案不存在/已刪除 -> `404 FILE_NOT_FOUND`
   - **Session 已過期** -> `403 FORBIDDEN`
 
@@ -69,7 +66,7 @@
 ## 4. 檔案刪除 (`DELETE /api/files/:code`)
 
 ### Request
-- **Endpoint**: `DELETE /api/files/:code?token=...`
+- **Endpoint**: `DELETE /api/files/:code`
 
 ### Behavior
 - **Soft Delete**: API 僅標記 `status = 'deleted'`，實體檔案由背景任務延後清理。
@@ -99,7 +96,6 @@
 4. **完成**: 
    - 顯示該次上傳產生的 **Session Code**。
    - 顯示完整分享網址。
-   - 顯示該檔案的下載/刪除 **Token**。
 
 ### 6.2 下載路徑區分 (Differentiated Download Paths)
 不論是透過以下哪種方式，皆須經過 **Selection Page (檔案列表頁)**：

@@ -168,13 +168,6 @@
                             <button class="btn btn-sm btn-outline" id="btn-copy-url">複製</button>
                         </div>
                     </div>
-                    <div class="share-item">
-                        <label>下載/刪除 Token (請妥善保存，僅顯示一次)</label>
-                        <div class="copy-group">
-                            <input type="text" id="res-token" readonly style="color:var(--danger); font-weight: 800;">
-                            <button class="btn btn-sm btn-outline" id="btn-copy-token">複製</button>
-                        </div>
-                    </div>
                     <button class="btn btn-primary" style="width:100%; margin-top:1rem;" id="btn-manage-session">
                         管理此交換站檔案
                     </button>
@@ -243,7 +236,6 @@
             document.querySelectorAll('.btn-home').forEach(btn => btn.addEventListener('click', showHomepage));
             document.getElementById('btn-copy-code').addEventListener('click', () => copyToClipboard('res-code'));
             document.getElementById('btn-copy-url').addEventListener('click', () => copyToClipboard('res-url'));
-            document.getElementById('btn-copy-token').addEventListener('click', () => copyToClipboard('res-token'));
             document.getElementById('btn-manage-session').addEventListener('click', () => {
                 const code = document.getElementById('res-code').value;
                 if (code) loadSession(code);
@@ -326,6 +318,11 @@
             errorMsg.textContent = '';
             container.style.display = 'block';
             statusText.textContent = '正在初始化上傳...';
+            
+            const isSessionView = document.getElementById('session-view').style.display === 'block';
+            if (!isSessionView) {
+                resultBox.style.display = 'none';
+            }
 
             try {
                 if (!targetCode) {
@@ -362,7 +359,6 @@
                 const fill = document.getElementById('progress-fill');
                 const percentText = document.getElementById('progress-percent');
                 const statusText = document.getElementById('progress-text');
-                const resultBox = document.getElementById('upload-result-box');
                 
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `/api/sessions/${code}/files`, true);
@@ -378,21 +374,29 @@
 
                 xhr.onload = () => {
                     if (xhr.status === 201) {
-                        // 更新結果資訊
-                        document.getElementById('res-code').value = code;
-                        document.getElementById('res-url').value = `${window.location.origin}/?code=${code}`;
-                        const result = JSON.parse(xhr.responseText);
-                        document.getElementById('res-token').value = result.data.downloadToken;
-                        
-                        // 顯示結果區塊 (如果是從首頁上傳)
-                        if (document.getElementById('homepage-view').style.display === 'block') {
-                            resultBox.style.display = 'block';
+                        try {
+                            const result = JSON.parse(xhr.responseText);
+                            const baseUrl = window.location.origin + window.location.pathname.replace(/\/$/, '');
+                            
+                            // 更新結果資訊
+                            document.getElementById('res-code').value = code;
+                            document.getElementById('res-url').value = `${baseUrl}/?code=${code}`;
+                            
+                            // 顯示結果區塊 (如果是從首頁上傳)
+                            const isSessionView = document.getElementById('session-view').style.display === 'block';
+                            if (!isSessionView) {
+                                const rb = document.getElementById('upload-result-box');
+                                rb.style.display = 'block';
+                                rb.scrollIntoView({ behavior: 'smooth' });
+                            }
+                            
+                            if (isSessionView) {
+                                refreshFiles();
+                            }
+                            resolve();
+                        } catch (parseErr) {
+                            reject(new Error(`解析回應失敗: ${parseErr.message}`));
                         }
-                        
-                        if (document.getElementById('session-view').style.display === 'block') {
-                            refreshFiles();
-                        }
-                        resolve();
                     } else {
                         const result = JSON.parse(xhr.responseText);
                         reject(new Error(`檔案 ${file.name} 上傳失敗: ` + (result.error?.message || '未知錯誤')));
@@ -535,18 +539,14 @@
         }
 
         function downloadFile(fileCode) {
-            const token = prompt('請輸入此檔案的下載 Token：');
-            if (!token) return;
-            window.open(`/api/files/${fileCode}/download?token=${token}`, '_blank');
+            window.open(`/api/files/${fileCode}/download`, '_blank');
         }
 
         async function deleteFile(fileCode) {
-            const token = prompt('請輸入 Token 以確認刪除：');
-            if (!token) return;
             if (!confirm('確定要刪除此檔案？')) return;
 
             try {
-                const res = await fetch(`/api/files/${fileCode}?token=${token}`, { method: 'DELETE' });
+                const res = await fetch(`/api/files/${fileCode}`, { method: 'DELETE' });
                 const result = await res.json();
                 if (result.success) {
                     alert('已刪除');

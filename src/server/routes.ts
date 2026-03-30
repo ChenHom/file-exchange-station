@@ -246,8 +246,7 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
         if (!file) throw new Error('Upload failed');
 
         sendSuccess(res, 201, { 
-          file: sanitizeFile(file),
-          downloadToken: result.token
+          file: sanitizeFile(file)
         });
         return;
       }
@@ -259,16 +258,11 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
     if (fileDownloadMatch) {
       if (req.method !== 'GET') return methodNotAllowed(res);
       const fileCode = fileDownloadMatch[1];
-      const token = url.searchParams.get('token') || '';
 
       if (!fileCode) throw new AppError('Invalid file code', 400, 'BAD_REQUEST');
       const file = await getFileByCode(fileCode);
       if (!file || file.status === 'deleted') throw new AppError('File not found', 404, 'FILE_NOT_FOUND');
       
-      if (!file.tokenHash || !verifyToken(token, file.tokenHash)) {
-        throw new AppError('Invalid or missing token', 403, 'FORBIDDEN');
-      }
-
       const session = await getSessionById(file.sessionId);
       if (!session || !isSessionActive(session)) {
         throw new AppError('Session is no longer active', 403, 'FORBIDDEN');
@@ -285,16 +279,11 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
     if (fileDeleteMatch) {
       if (req.method !== 'DELETE') return methodNotAllowed(res);
       const fileCode = fileDeleteMatch[1];
-      const token = url.searchParams.get('token') || '';
 
       if (!fileCode) throw new AppError('Invalid file code', 400, 'BAD_REQUEST');
       const file = await getFileByCode(fileCode);
       if (!file || file.status === 'deleted') throw new AppError('File not found', 404, 'FILE_NOT_FOUND');
       
-      if (!file.tokenHash || !verifyToken(token, file.tokenHash)) {
-        throw new AppError('Invalid or missing token', 403, 'FORBIDDEN');
-      }
-
       const session = await getSessionById(file.sessionId);
       if (!session || !isSessionActive(session)) {
         throw new AppError('Session is no longer active', 403, 'FORBIDDEN');
