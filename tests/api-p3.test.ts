@@ -53,6 +53,37 @@ describe('API P3 Integration (Mocked)', () => {
     expect(res.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
   });
 
+  it('POST /api/sessions 應成功建立 Session', async () => {
+    req.url = '/api/sessions';
+    req.method = 'POST';
+    req.on = vi.fn((event, cb) => {
+      if (event === 'data') cb(Buffer.from(JSON.stringify({ title: 'Test Session' })));
+      if (event === 'end') cb();
+      return req;
+    });
+
+    (sessionService.createSession as any).mockResolvedValue({
+      id: 1, code: 'NEWCODE12345', title: 'Test Session', status: 'active', expiresAt: '2026-03-31T00:00:00Z'
+    });
+
+    await routeRequest(req, res);
+    expect(res.writeHead).toHaveBeenCalledWith(201, expect.any(Object));
+  });
+
+  it('GET /api/sessions/:code/files 應回傳 Session 與空檔案列表 (初始化流程)', async () => {
+    const code = 'NEWCODE12345';
+    req.url = `/api/sessions/${code}/files`;
+    req.method = 'GET';
+
+    (sessionService.getSessionByCode as any).mockResolvedValue({
+      id: 1, code, status: 'active', expiresAt: '2026-03-31T00:00:00Z'
+    });
+    (fileService.listFilesBySession as any).mockResolvedValue([]);
+
+    await routeRequest(req, res);
+    expect(res.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
+  });
+
   it('GET /api/sessions/:code/download-all 應回傳 ZIP 串流', async () => {
     const code = 'ABCDEFGH2345';
     req.url = `/api/sessions/${code}/download-all`;
