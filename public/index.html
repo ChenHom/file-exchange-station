@@ -3,61 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>暫存檔案交換站 | File Exchange</title>
+    <title>暫存檔案交換站 | File Exchange Station</title>
     <style>
         :root {
             --primary: #2563eb;
+            --primary-hover: #1d4ed8;
             --danger: #dc2626;
+            --success: #16a34a;
             --bg: #f8fafc;
             --card: #ffffff;
             --text: #1e293b;
             --text-light: #64748b;
+            --border: #e2e8f0;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); max-width: 800px; margin: 0 auto; padding: 2rem 1rem; line-height: 1.5; }
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: var(--bg); 
+            color: var(--text); 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 2rem 1rem; 
+            line-height: 1.5; 
+        }
         
         .sys-stats { font-size: 0.75rem; color: var(--text-light); text-align: right; margin-bottom: 1rem; }
         
-        h1 { text-align: center; color: var(--primary); margin-bottom: 2rem; }
-        .card { background: var(--card); padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); margin-bottom: 1.5rem; }
+        h1 { text-align: center; color: var(--primary); margin-bottom: 2rem; font-weight: 800; }
+        .card { 
+            background: var(--card); 
+            padding: 2rem; 
+            border-radius: 16px; 
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); 
+            margin-bottom: 1.5rem; 
+        }
         
-        .session-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; margin-bottom: 1rem; }
-        .session-title { font-size: 1.25rem; font-weight: 700; margin: 0; }
-        .session-meta { font-size: 0.875rem; color: var(--text-light); margin-top: 0.25rem; }
-        .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .upload-zone { 
+            border: 3px dashed var(--border); 
+            border-radius: 12px; 
+            padding: 3rem 2rem; 
+            text-align: center; 
+            cursor: pointer; 
+            transition: all 0.2s ease; 
+            background: #fff;
+        }
+        .upload-zone:hover, .upload-zone.dragover { 
+            background: #eff6ff; 
+            border-color: var(--primary); 
+            transform: scale(1.01);
+        }
+        .upload-zone p { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
+        
+        .input-group { display: flex; flex-direction: column; gap: 0.75rem; max-width: 500px; margin: 1.5rem auto; }
+        .input-row { display: flex; gap: 0.5rem; }
+        input[type="text"] { 
+            flex: 1; padding: 0.875rem; border: 1px solid var(--border); 
+            border-radius: 8px; outline: none; font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+
+        .btn { 
+            border: none; border-radius: 8px; padding: 0.75rem 1.25rem; 
+            font-weight: 700; transition: all 0.2s; cursor: pointer; 
+            text-decoration: none; font-size: 1rem; display: inline-flex; 
+            align-items: center; justify-content: center; gap: 0.5rem;
+        }
+        .btn:active { transform: translateY(1px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-sm { padding: 0.5rem 1rem; font-size: 0.875rem; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-light); }
+        .btn-outline:hover { background: #f1f5f9; color: var(--text); }
+        .btn-danger { background: #fee2e2; color: var(--danger); }
+        .btn-danger:hover { background: var(--danger); color: white; }
+
+        .upload-progress-container { margin-top: 1.5rem; display: none; }
+        .progress-bar { width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; }
+        .progress-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.1s; }
+        
+        .token-display { 
+            background: #f0fdf4; border: 1px solid #bbf7d0; 
+            padding: 1.5rem; border-radius: 12px; margin-top: 1.5rem; 
+            display: none; 
+        }
+        .share-item { margin-bottom: 1rem; }
+        .share-item label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-bottom: 0.25rem; }
+        .copy-group { display: flex; gap: 0.5rem; }
+        .copy-group input { background: #fff; }
+
+        .session-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.5rem; }
+        .session-title { font-size: 1.5rem; font-weight: 800; margin: 0; color: var(--text); }
+        .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
         .status-active { background: #dcfce7; color: #166534; }
         .status-expired { background: #fee2e2; color: #991b1b; }
 
-        .list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        .file-list { list-style: none; padding: 0; }
-        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 0.75rem; transition: transform 0.1s; }
+        .file-list { list-style: none; padding: 0; margin: 0; }
+        .file-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 1rem; border: 1px solid var(--border); border-radius: 12px; 
+            margin-bottom: 0.75rem; transition: border-color 0.2s;
+            background: #fff;
+        }
         .file-item:hover { border-color: var(--primary); }
-        .file-item.selected { border-color: var(--primary); background: #eff6ff; }
         .file-info { flex: 1; min-width: 0; }
-        .file-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+        .file-name { font-weight: 700; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .file-meta { font-size: 0.75rem; color: var(--text-light); }
         
-        .btn { border: none; border-radius: 6px; padding: 0.5rem 1rem; font-weight: 600; transition: opacity 0.2s; cursor: pointer; text-decoration: none; font-size: 0.875rem; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-danger { background: var(--card); color: var(--danger); border: 1px solid var(--danger); }
-        .btn-danger:hover { background: var(--danger); color: white; }
-        .actions { display: flex; gap: 0.5rem; }
+        .empty-state { text-align: center; color: var(--text-light); padding: 3rem; }
+        .divider { display: flex; align-items: center; margin: 2rem 0; color: var(--text-light); font-size: 0.875rem; font-weight: 600; }
+        .divider::before, .divider::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
+        .divider::before { margin-right: 1rem; }
+        .divider::after { margin-left: 1rem; }
 
-        .upload-zone { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 2.5rem; text-align: center; cursor: pointer; transition: background 0.2s; }
-        .upload-zone:hover { background: #f1f5f9; border-color: var(--primary); }
-        .upload-progress-container { margin-top: 1rem; display: none; }
-        .progress-bar { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
-        .progress-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.1s; }
-        
-        #no-session-view { text-align: center; padding: 4rem 0; }
-        .input-group { display: flex; gap: 0.5rem; max-width: 400px; margin: 1rem auto; }
-        input[type="text"] { flex: 1; padding: 0.75rem; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; }
-        input[type="text"]:focus { border-color: var(--primary); outline: 2px solid var(--primary); }
+        #error-msg { color: var(--danger); font-size: 0.875rem; margin-top: 1rem; text-align: center; font-weight: 600; }
+        #status-feedback { text-align: center; padding: 1rem; font-weight: 600; color: var(--primary); display: none; }
 
-        .token-display { background: #fff7ed; border: 1px solid #fed7aa; padding: 1rem; border-radius: 8px; margin-top: 1rem; display: none; }
-        .token-value { font-family: monospace; font-weight: 700; color: #9a3412; font-size: 1.1rem; }
-        
-        .empty-state { text-align: center; color: var(--text-light); padding: 2rem; }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .loading { animation: pulse 1.5s infinite; }
     </style>
 </head>
 <body>
@@ -65,64 +133,94 @@
     <h1>暫存檔案交換站</h1>
 
     <div id="app">
-        <!-- 初始檢視：輸入 Code -->
-        <div id="no-session-view" class="card">
-            <p>請輸入 12 碼 Session Code 存取交換站</p>
-            <div class="input-group">
-                <input type="text" id="code-input" placeholder="例如: ABCDEFGH2345" maxlength="12">
-                <button class="btn btn-primary" onclick="handleLoad()">進入</button>
+        <!-- 首頁：上傳優先 -->
+        <div id="homepage-view">
+            <div class="card">
+                <div id="upload-zone" class="upload-zone">
+                    <p>拖曳檔案至此或點擊上傳</p>
+                    <small style="color:var(--text-light)">單檔上限 20MB | 自動建立 24h 暫存空間</small>
+                    <input type="file" id="file-input" style="display:none;" onchange="handleFileSelect(event)">
+                </div>
+
+                <div id="progress-container" class="upload-progress-container">
+                    <div style="display:flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.5rem; font-weight: 700;">
+                        <span id="progress-text">準備上傳...</span>
+                        <span id="progress-percent">0%</span>
+                    </div>
+                    <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+                </div>
+
+                <div id="upload-result-box" class="token-display">
+                    <h3 style="margin: 0 0 1rem 0; color: var(--success); display: flex; align-items: center; gap: 0.5rem;">
+                        ✅ 上傳成功
+                    </h3>
+                    <div class="share-item">
+                        <label>交換代碼 (Session Code)</label>
+                        <div class="copy-group">
+                            <input type="text" id="res-code" readonly>
+                            <button class="btn btn-sm btn-outline" onclick="copyToClipboard('res-code')">複製</button>
+                        </div>
+                    </div>
+                    <div class="share-item">
+                        <label>分享連結 (Share URL)</label>
+                        <div class="copy-group">
+                            <input type="text" id="res-url" readonly>
+                            <button class="btn btn-sm btn-outline" onclick="copyToClipboard('res-url')">複製</button>
+                        </div>
+                    </div>
+                    <div class="share-item">
+                        <label>下載/刪除 Token (請妥善保存，僅顯示一次)</label>
+                        <div class="copy-group">
+                            <input type="text" id="res-token" readonly style="color:var(--danger); font-weight: 800;">
+                            <button class="btn btn-sm btn-outline" onclick="copyToClipboard('res-token')">複製</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" style="width:100%; margin-top:1rem;" onclick="loadSession(document.getElementById('res-code').value)">
+                        管理此交換站檔案
+                    </button>
+                </div>
+
+                <div class="divider">或存取現有交換站</div>
+
+                <div class="input-group">
+                    <div class="input-row">
+                        <input type="text" id="code-input" placeholder="請輸入 12 碼交換代碼" maxlength="12" onkeydown="if(event.key==='Enter') handleViewSession()">
+                        <button class="btn btn-primary" onclick="handleViewSession()">進入交換站</button>
+                    </div>
+                </div>
+
+                <div id="status-feedback" class="loading">準備中...</div>
+                <p id="error-msg"></p>
             </div>
-            <p id="error-msg" style="color:var(--danger); font-size: 0.875rem; margin-top: 0.5rem;"></p>
         </div>
 
-        <!-- 交換站主檢視 -->
+        <!-- 檔案列表檢視 (Selection Page) -->
         <div id="session-view" style="display:none;">
             <div class="card">
                 <div class="session-header">
                     <div>
                         <h2 id="disp-title" class="session-title">載入中...</h2>
-                        <div id="disp-meta" class="session-meta"></div>
+                        <div id="disp-meta" style="font-size: 0.875rem; color: var(--text-light); margin-top: 0.25rem;"></div>
                     </div>
                     <span id="disp-status" class="status-badge"></span>
                 </div>
 
-                <div id="upload-section">
-                    <div id="upload-zone" class="upload-zone" onclick="document.getElementById('file-input').click()">
-                        <p>點擊或拖曳檔案至此進行上傳</p>
-                        <small style="color:var(--text-light)">單檔上限 20MB</small>
-                        <input type="file" id="file-input" style="display:none;" onchange="handleFileSelect(event)">
-                    </div>
-                    
-                    <div id="progress-container" class="upload-progress-container">
-                        <div style="display:flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.25rem;">
-                            <span id="progress-text">準備上傳...</span>
-                            <span id="progress-percent">0%</span>
-                        </div>
-                        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
-                    </div>
-
-                    <div id="token-box" class="token-display">
-                        <p style="margin:0 0 0.5rem 0; font-size: 0.875rem; font-weight: 600;">⚠️ 上傳成功！請複製並妥善保存您的下載/刪除 Token：</p>
-                        <div class="token-value" id="disp-token"></div>
-                        <p style="margin:0.5rem 0 0 0; font-size: 0.75rem; color: #c2410c;">此 Token 僅顯示這一次，若遺失將無法下載或刪除該檔案。</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="list-header">
+                <div class="list-header" style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h3 style="margin:0">檔案列表</h3>
-                    <div class="actions" id="bulk-actions" style="display:none;">
-                        <button class="btn btn-primary" onclick="downloadAllZip()">📦 全部打包 (ZIP)</button>
-                        <button class="btn btn-danger" onclick="deleteSelectedFiles()" id="btn-del-sel" style="display:none;">🗑️ 刪除所選</button>
+                    <div id="session-actions">
+                        <button class="btn btn-primary btn-sm" onclick="downloadAllZip()">打包下載全部 (ZIP)</button>
                     </div>
                 </div>
+
                 <ul id="file-list" class="file-list"></ul>
-                <div id="empty-list" class="empty-state" style="display:none;">目前尚無檔案</div>
-            </div>
-            
-            <div style="text-align: center;">
-                <button class="btn" style="color:var(--text-light)" onclick="location.href='/'">← 返回首頁</button>
+                <div id="empty-list" class="empty-state" style="display:none;">
+                    <p>目前尚無檔案</p>
+                    <button class="btn btn-outline btn-sm" onclick="showHomepage()">立即上傳</button>
+                </div>
+
+                <div style="text-align: center; margin-top: 2rem;">
+                    <button class="btn btn-outline" onclick="showHomepage()">← 返回首頁</button>
+                </div>
             </div>
         </div>
     </div>
@@ -130,22 +228,247 @@
     <script>
         let currentCode = '';
         let timer = null;
-        let selectedFiles = new Set();
         let sessionStatus = 'active';
 
-        async function fetchStats() {
-            try {
-                const res = await fetch('/api/stats');
-                const result = await res.json();
-                if (result.success) {
-                    const ds = result.data.diskSpace;
-                    const cl = result.data.cleanup;
-                    const cleanupText = cl.lastRunAt ? ` | 上次清理: ${new Date(cl.lastRunAt).toLocaleString()} (刪除 ${cl.removedCount} 檔)` : '';
-                    document.getElementById('sys-stats').textContent = `系統儲存空間: ${ds.usedMB}MB / ${ds.totalMB}MB (${ds.usagePercent}%)${cleanupText}`;
-                }
-            } catch (e) {
-                document.getElementById('sys-stats').textContent = '系統狀態: 未知';
+        // --- 初始化 ---
+        window.onload = () => {
+            fetchStats();
+            setupDragAndDrop();
+            
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            if (code) {
+                loadSession(code);
             }
+        };
+
+        function showHomepage() {
+            document.getElementById('homepage-view').style.display = 'block';
+            document.getElementById('session-view').style.display = 'none';
+            document.getElementById('error-msg').textContent = '';
+            history.pushState(null, '', '/');
+        }
+
+        function setupDragAndDrop() {
+            const zone = document.getElementById('upload-zone');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                zone.addEventListener(eventName, e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                zone.addEventListener(eventName, () => zone.classList.add('dragover'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                zone.addEventListener(eventName, () => zone.classList.remove('dragover'), false);
+            });
+
+            zone.addEventListener('drop', e => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) handleUpload(files);
+            }, false);
+
+            zone.onclick = () => document.getElementById('file-input').click();
+        }
+
+        // --- 核心邏輯 ---
+
+        async function handleUpload(files) {
+            // 如果已在 session-view，則上傳到當前 session
+            let targetCode = (document.getElementById('session-view').style.display === 'block') ? currentCode : document.getElementById('code-input').value.trim();
+            
+            const errorMsg = document.getElementById('error-msg');
+            const resultBox = document.getElementById('upload-result-box');
+            const container = document.getElementById('progress-container');
+            const statusText = document.getElementById('progress-text');
+            
+            errorMsg.textContent = '';
+            container.style.display = 'block';
+            statusText.textContent = '正在初始化上傳...';
+
+            try {
+                if (!targetCode) {
+                    // 自動建立 Session
+                    const res = await fetch('/api/sessions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title: `快速傳輸 (${new Date().toLocaleTimeString()})` })
+                    });
+                    const result = await res.json();
+                    if (!result.success) throw new Error(result.error?.message || '建立空間失敗');
+                    targetCode = result.data.session.code;
+                }
+
+                // 批次處理上傳
+                const fileArray = Array.from(files);
+                for (let i = 0; i < fileArray.length; i++) {
+                    const file = fileArray[i];
+                    statusText.textContent = `正在準備第 ${i+1}/${fileArray.length} 個檔案: ${file.name}`;
+                    await performUpload(targetCode, file);
+                }
+                
+                // 全部完成後的提示
+                statusText.textContent = `共 ${fileArray.length} 個檔案上傳完成！`;
+                document.getElementById('progress-fill').style.background = 'var(--success)';
+            } catch (err) {
+                errorMsg.textContent = err.message;
+                container.style.display = 'none';
+            }
+        }
+
+        function performUpload(code, file) {
+            return new Promise((resolve, reject) => {
+                const fill = document.getElementById('progress-fill');
+                const percentText = document.getElementById('progress-percent');
+                const statusText = document.getElementById('progress-text');
+                const resultBox = document.getElementById('upload-result-box');
+                
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `/api/sessions/${code}/files`, true);
+
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        fill.style.width = pct + '%';
+                        percentText.textContent = pct + '%';
+                        statusText.textContent = `上傳中 (${file.name}): ${pct}%`;
+                    }
+                };
+
+                xhr.onload = () => {
+                    if (xhr.status === 201) {
+                        const result = JSON.parse(xhr.responseText);
+                        
+                        // 更新結果資訊
+                        document.getElementById('res-code').value = code;
+                        document.getElementById('res-url').value = `${window.location.origin}/?code=${code}`;
+                        document.getElementById('res-token').value = result.data.downloadToken;
+                        
+                        // 顯示結果區塊 (如果是從首頁上傳)
+                        if (document.getElementById('homepage-view').style.display === 'block') {
+                            resultBox.style.display = 'block';
+                        }
+                        
+                        if (document.getElementById('session-view').style.display === 'block') {
+                            refreshFiles();
+                        }
+                        resolve();
+                    } else {
+                        const result = JSON.parse(xhr.responseText);
+                        reject(new Error(`檔案 ${file.name} 上傳失敗: ` + (result.error?.message || '未知錯誤')));
+                    }
+                };
+
+                xhr.onerror = () => {
+                    reject(new Error(`檔案 ${file.name} 網路連線失敗`));
+                };
+
+                const formData = new FormData();
+                formData.append('file', file);
+                xhr.send(formData);
+            });
+        }
+
+        async function loadSession(code) {
+            currentCode = code;
+            const errorMsg = document.getElementById('error-msg');
+            const feedback = document.getElementById('status-feedback');
+            errorMsg.textContent = '';
+            
+            if (document.getElementById('homepage-view').style.display === 'block') {
+                feedback.style.display = 'block';
+                feedback.textContent = '正在解析資料...';
+            }
+
+            try {
+                const res = await fetch(`/api/sessions/${code}`);
+                const result = await res.json();
+
+                if (!result.success) throw new Error(result.error?.message || '查無此交換站');
+
+                const session = result.data.session;
+                sessionStatus = session.status;
+                document.getElementById('disp-title').textContent = session.title || '未命名交換站';
+                document.getElementById('disp-status').textContent = session.status;
+                document.getElementById('disp-status').className = 'status-badge ' + (session.status === 'active' ? 'status-active' : 'status-expired');
+                
+                updateExpiryCountdown(session.expiresAt);
+
+                feedback.style.display = 'none';
+                document.getElementById('homepage-view').style.display = 'none';
+                document.getElementById('session-view').style.display = 'block';
+                
+                history.pushState(null, '', `/?code=${code}`);
+                refreshFiles();
+            } catch (err) {
+                feedback.style.display = 'none';
+                errorMsg.textContent = err.message;
+            }
+        }
+
+        async function handleViewSession() {
+            const code = document.getElementById('code-input').value.trim();
+            if (!code) return;
+            loadSession(code);
+        }
+
+        async function refreshFiles() {
+            try {
+                const res = await fetch(`/api/sessions/${currentCode}/files`);
+                const result = await res.json();
+                const list = document.getElementById('file-list');
+                const empty = document.getElementById('empty-list');
+                
+                list.innerHTML = '';
+                const files = result.data.files || [];
+
+                if (files.length === 0) {
+                    empty.style.display = 'block';
+                    document.getElementById('session-actions').style.display = 'none';
+                    return;
+                }
+                
+                empty.style.display = 'none';
+                document.getElementById('session-actions').style.display = 'block';
+
+                files.forEach(file => {
+                    const li = document.createElement('li');
+                    li.className = 'file-item';
+                    li.innerHTML = `
+                        <div class="file-info">
+                            <span class="file-name" title="${file.originalName}">${file.originalName}</span>
+                            <span class="file-meta">${(file.sizeBytes / 1024 / 1024).toFixed(2)} MB | 下載: ${file.downloadCount} 次</span>
+                        </div>
+                        <div style="display:flex; gap:0.5rem;">
+                            <button class="btn btn-primary btn-sm" onclick="downloadFile('${file.code}')">下載</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteFile('${file.code}')">刪除</button>
+                        </div>
+                    `;
+                    list.appendChild(li);
+                });
+            } catch (err) {
+                console.error('Failed to fetch files:', err);
+            }
+        }
+
+        // --- 工具函式 ---
+
+        function copyToClipboard(id) {
+            const input = document.getElementById(id);
+            input.select();
+            document.execCommand('copy');
+            const btn = input.nextElementSibling;
+            const originalText = btn.textContent;
+            btn.textContent = '已複製!';
+            btn.classList.replace('btn-outline', 'btn-primary');
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.classList.replace('btn-primary', 'btn-outline');
+            }, 2000);
         }
 
         function updateExpiryCountdown(expiresAt) {
@@ -162,10 +485,6 @@
                     dispMeta.innerHTML = `<span style="color:var(--danger)">已過期</span>`;
                     document.getElementById('disp-status').className = 'status-badge status-expired';
                     document.getElementById('disp-status').textContent = 'Expired';
-                    document.getElementById('upload-section').style.opacity = '0.5';
-                    document.getElementById('upload-zone').onclick = null;
-                    document.getElementById('upload-zone').style.cursor = 'not-allowed';
-                    document.getElementById('bulk-actions').style.display = 'none'; // 過期不給批次操作
                     clearInterval(timer);
                     return;
                 }
@@ -173,250 +492,49 @@
                 const hours = Math.floor(diff / 3600000);
                 const mins = Math.floor((diff % 3600000) / 60000);
                 const secs = Math.floor((diff % 60000) / 1000);
-                dispMeta.textContent = `剩餘有效時間：${hours}h ${mins}m ${secs}s | 代碼：${currentCode}`;
+                dispMeta.textContent = `剩餘時間：${hours}h ${mins}m ${secs}s | 代碼：${currentCode}`;
             };
-            
             update();
             timer = setInterval(update, 1000);
         }
 
-        async function handleLoad() {
-            const code = document.getElementById('code-input').value.trim();
-            if (!code) return;
-            loadSession(code);
-        }
-
-        async function loadSession(code) {
-            currentCode = code;
-            const errorMsg = document.getElementById('error-msg');
-            errorMsg.textContent = '';
-
-            try {
-                const res = await fetch(`/api/sessions/${code}`);
-                const result = await res.json();
-
-                if (!result.success) {
-                    throw new Error(result.error?.message || '查無此交換站');
-                }
-
-                const session = result.data.session;
-                sessionStatus = session.status;
-                document.getElementById('disp-title').textContent = session.title || '未命名交換站';
-                document.getElementById('disp-status').textContent = session.status;
-                document.getElementById('disp-status').className = 'status-badge ' + (session.status === 'active' ? 'status-active' : 'status-expired');
-                
-                updateExpiryCountdown(session.expiresAt);
-
-                document.getElementById('no-session-view').style.display = 'none';
-                document.getElementById('session-view').style.display = 'block';
-                
-                history.pushState(null, '', `/?code=${code}`);
-                refreshFiles();
-            } catch (err) {
-                errorMsg.textContent = err.message;
-            }
-        }
-
-        function toggleSelect(code, el) {
-            if (sessionStatus !== 'active') return;
-            const chk = document.getElementById(`chk-${code}`);
-            if (selectedFiles.has(code)) {
-                selectedFiles.delete(code);
-                el.classList.remove('selected');
-                if(chk) chk.checked = false;
-            } else {
-                selectedFiles.add(code);
-                el.classList.add('selected');
-                if(chk) chk.checked = true;
-            }
-            updateBulkActions();
-        }
-
-        function updateBulkActions() {
-            if (sessionStatus !== 'active') {
-                document.getElementById('bulk-actions').style.display = 'none';
-                return;
-            }
-            const btnDelSel = document.getElementById('btn-del-sel');
-            document.getElementById('bulk-actions').style.display = 'flex';
-            if (selectedFiles.size > 0) {
-                btnDelSel.style.display = 'block';
-                btnDelSel.textContent = `🗑️ 刪除所選 (${selectedFiles.size})`;
-            } else {
-                btnDelSel.style.display = 'none';
-            }
-        }
-
-        async function refreshFiles() {
-            try {
-                selectedFiles.clear();
-                
-                const res = await fetch(`/api/sessions/${currentCode}/files`);
-                const result = await res.json();
-                const list = document.getElementById('file-list');
-                const empty = document.getElementById('empty-list');
-                
-                list.innerHTML = '';
-                const files = result.data.files || [];
-
-                if (files.length === 0) {
-                    empty.style.display = 'block';
-                    document.getElementById('bulk-actions').style.display = 'none';
-                    return;
-                }
-                
-                empty.style.display = 'none';
-                updateBulkActions();
-
-                files.forEach(file => {
-                    const li = document.createElement('li');
-                    li.className = 'file-item';
-                    if (sessionStatus === 'active') {
-                        li.style.cursor = 'pointer';
-                        li.onclick = (e) => {
-                            if(e.target.tagName === 'BUTTON') return;
-                            toggleSelect(file.code, li);
-                        };
-                    }
-                    
-                    const checkboxHtml = sessionStatus === 'active' ? `<input type="checkbox" id="chk-${file.code}" onclick="event.stopPropagation(); toggleSelect('${file.code}', this.parentElement.parentElement)" style="cursor:pointer; margin-right:0.5rem;">` : '';
-
-                    li.innerHTML = `
-                        <div class="file-info" style="display:flex; align-items:center;">
-                            ${checkboxHtml}
-                            <div>
-                                <span class="file-name" title="${file.originalName}">${file.originalName}</span>
-                                <span class="file-meta">${(file.sizeBytes / 1024 / 1024).toFixed(2)} MB | ${file.mimeType} | 下載: ${file.downloadCount} 次</span>
-                            </div>
-                        </div>
-                        <div class="actions">
-                            <button class="btn btn-primary" ${sessionStatus !== 'active' ? 'disabled' : ''} onclick="downloadFile('${file.code}')">下載</button>
-                            <button class="btn btn-danger" ${sessionStatus !== 'active' ? 'disabled' : ''} onclick="deleteFile('${file.code}')">刪除</button>
-                        </div>
-                    `;
-                    list.appendChild(li);
-                });
-            } catch (err) {
-                console.error('Failed to fetch files:', err);
-            }
-        }
-
-        function downloadAllZip() {
-            if (sessionStatus !== 'active') return;
-            window.open(`/api/sessions/${currentCode}/download-all`, '_blank');
-            setTimeout(refreshFiles, 2000);
-        }
-
-        async function deleteSelectedFiles() {
-            if (selectedFiles.size === 0 || sessionStatus !== 'active') return;
-            const token = prompt('請輸入 Token 以確認批次刪除：');
-            if (!token) return;
-            if (!confirm(`確定要刪除選取的 ${selectedFiles.size} 個檔案？`)) return;
-
-            let successCount = 0;
-            for (const code of selectedFiles) {
-                try {
-                    const res = await fetch(`/api/files/${code}?token=${token}`, { method: 'DELETE' });
-                    if (res.ok) successCount++;
-                } catch (e) {}
-            }
-            alert(`已成功刪除 ${successCount} 個檔案`);
-            refreshFiles();
-        }
-
         function downloadFile(fileCode) {
-            if (sessionStatus !== 'active') return;
             const token = prompt('請輸入此檔案的下載 Token：');
             if (!token) return;
             window.open(`/api/files/${fileCode}/download?token=${token}`, '_blank');
-            setTimeout(refreshFiles, 2000);
         }
 
         async function deleteFile(fileCode) {
-            if (sessionStatus !== 'active') return;
             const token = prompt('請輸入 Token 以確認刪除：');
             if (!token) return;
-            if (!confirm('刪除後無法復原，確定？')) return;
+            if (!confirm('確定要刪除此檔案？')) return;
 
             try {
                 const res = await fetch(`/api/files/${fileCode}?token=${token}`, { method: 'DELETE' });
                 const result = await res.json();
                 if (result.success) {
-                    alert('已標記為刪除');
+                    alert('已刪除');
                     refreshFiles();
                 } else {
-                    alert('刪除失敗: ' + result.error.message);
+                    alert('失敗: ' + result.error.message);
                 }
-            } catch (err) {
-                alert('系統錯誤');
-            }
+            } catch (err) { alert('系統錯誤'); }
         }
 
-        function handleFileSelect(e) {
-            if (sessionStatus !== 'active') return;
-            const file = e.target.files[0];
-            if (!file) return;
-            uploadFile(file);
+        function downloadAllZip() {
+            window.location.href = `/api/sessions/${currentCode}/download-all`;
         }
 
-        function uploadFile(file) {
-            if (sessionStatus !== 'active') return;
-            const container = document.getElementById('progress-container');
-            const fill = document.getElementById('progress-fill');
-            const percentText = document.getElementById('progress-percent');
-            const statusText = document.getElementById('progress-text');
-            const tokenBox = document.getElementById('token-box');
-            const dispToken = document.getElementById('disp-token');
-
-            container.style.display = 'block';
-            tokenBox.style.display = 'none';
-            
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', `/api/sessions/${currentCode}/files`, true);
-
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    const pct = Math.round((e.loaded / e.total) * 100);
-                    fill.style.width = pct + '%';
-                    percentText.textContent = pct + '%';
-                    statusText.textContent = `上傳中: ${(e.loaded / 1024 / 1024).toFixed(2)} / ${(e.total / 1024 / 1024).toFixed(2)} MB`;
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const result = await res.json();
+                if (result.success) {
+                    const ds = result.data.diskSpace;
+                    document.getElementById('sys-stats').textContent = `儲存空間: ${ds.usedMB}MB / ${ds.totalMB}MB (${ds.usagePercent}%)`;
                 }
-            };
-
-            xhr.onload = () => {
-                if (xhr.status === 201) {
-                    const result = JSON.parse(xhr.responseText);
-                    fill.style.background = '#16a34a';
-                    statusText.textContent = '上傳成功！';
-                    dispToken.textContent = result.data.downloadToken;
-                    tokenBox.style.display = 'block';
-                    refreshFiles();
-                } else {
-                    const result = JSON.parse(xhr.responseText);
-                    alert('上傳失敗: ' + (result.error?.message || '未知錯誤'));
-                    container.style.display = 'none';
-                }
-            };
-
-            xhr.onerror = () => {
-                alert('連線失敗');
-                container.style.display = 'none';
-            };
-
-            const formData = new FormData();
-            formData.append('file', file);
-            xhr.send(formData);
+            } catch (e) { document.getElementById('sys-stats').textContent = ''; }
         }
-
-        window.onload = () => {
-            fetchStats();
-            const params = new URLSearchParams(window.location.search);
-            const code = params.get('code');
-            if (code) {
-                document.getElementById('code-input').value = code;
-                loadSession(code);
-            }
-        };
     </script>
 </body>
 </html>
