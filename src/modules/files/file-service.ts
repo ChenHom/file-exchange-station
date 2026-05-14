@@ -19,10 +19,20 @@ export type FileRecord = {
   updatedAt: string;
 };
 
+function sanitizeOriginalName(originalName: string): string {
+  const normalized = basename(originalName.trim().replace(/\\/g, '/'));
+  const safe = normalized
+    .normalize('NFC')
+    .replace(/[\u0000-\u001f\u007f/\\:]/g, '_')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return safe || 'download';
+}
+
 export async function uploadFile(sessionId: number, originalName: string, mimeType: string, data: Buffer) {
   const { token, hash } = createToken();
   const fileCode = generateCode(10); // P2 定案為 10 碼
-  const safeOriginalName = basename(originalName.trim()).replace(/[^\w.\-()\s]/g, '_');
+  const safeOriginalName = sanitizeOriginalName(originalName);
   const storedName = `${sessionId}-${Date.now()}-${token.slice(0, 12)}`;
   await writeBufferToStorage(storedName, data);
 

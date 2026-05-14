@@ -30,11 +30,17 @@ export async function readRequestBody(req: IncomingMessage, limitBytes = 1_000_0
   return body.toString('utf8');
 }
 
+function asciiFallbackFileName(fileName: string): string {
+  const fallback = fileName.replace(/[^A-Za-z0-9._() -]/g, '_').trim();
+  return fallback || 'download';
+}
+
 export async function streamFile(res: ServerResponse, stream: Readable, fileName: string, mimeType: string, size: number): Promise<void> {
+  const fallback = asciiFallbackFileName(fileName).replace(/"/g, '_');
   res.writeHead(200, {
     'content-type': mimeType,
     'content-length': size,
-    'content-disposition': `attachment; filename="${encodeURIComponent(fileName)}"`
+    'content-disposition': `attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
   });
   await pipeline(stream, res);
 }
