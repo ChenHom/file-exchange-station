@@ -99,6 +99,12 @@
         .share-item label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-bottom: 0.25rem; }
         .copy-group { display: flex; gap: 0.5rem; }
         .copy-group input { background: #fff; }
+        .curl-box { margin-top: 1rem; padding: 1rem; border: 1px solid #bfdbfe; border-radius: 12px; background: #eff6ff; }
+        .curl-box h4 { margin: 0 0 0.75rem 0; color: var(--primary); }
+        .curl-command { margin-bottom: 0.75rem; }
+        .curl-command:last-child { margin-bottom: 0; }
+        .curl-command label { display: block; font-size: 0.75rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; margin-bottom: 0.25rem; }
+        .curl-command pre { margin: 0; padding: 0.75rem; border-radius: 8px; background: #0f172a; color: #e2e8f0; overflow-x: auto; font-size: 0.82rem; line-height: 1.45; white-space: pre-wrap; word-break: break-all; }
 
         .session-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.5rem; }
         .session-title { font-size: 1.5rem; font-weight: 800; margin: 0; color: var(--text); }
@@ -182,6 +188,17 @@
                         <div class="copy-group">
                             <input type="text" id="res-url" readonly>
                             <button class="btn btn-sm btn-outline" id="btn-copy-url">複製</button>
+                        </div>
+                    </div>
+                    <div id="res-curl-box" class="curl-box" style="display:none;">
+                        <h4>CLI curl 下載指令</h4>
+                        <div class="curl-command">
+                            <label>單檔下載（代表一個檔案）</label>
+                            <pre id="res-curl-single"></pre>
+                        </div>
+                        <div class="curl-command">
+                            <label>全部下載（ZIP）</label>
+                            <pre id="res-curl-all"></pre>
                         </div>
                     </div>
                     <button class="btn btn-primary" style="width:100%; margin-top:1rem;" id="btn-manage-session">
@@ -449,6 +466,7 @@
                             
                             document.getElementById('res-code').value = code;
                             document.getElementById('res-url').value = `${baseUrl}/?code=${code}`;
+                            updateResultCurlCommands(code);
                             
                             const isSessionView = document.getElementById('session-view').style.display === 'block';
                             if (!isSessionView) {
@@ -540,11 +558,13 @@
                 if (files.length === 0) {
                     empty.style.display = 'block';
                     document.getElementById('session-actions').style.display = 'none';
+                    updateResultCurlCommands(currentCode, []);
                     return;
                 }
                 
                 empty.style.display = 'none';
                 document.getElementById('session-actions').style.display = 'block';
+                updateResultCurlCommands(currentCode, files);
 
                 files.forEach(file => {
                     const li = document.createElement('li');
@@ -567,6 +587,26 @@
         }
 
         // --- 工具函式 ---
+
+        function shellQuote(value) {
+            return `'${String(value).replace(/'/g, `'\\''`)}'`;
+        }
+
+        function updateResultCurlCommands(code, files) {
+            const box = document.getElementById('res-curl-box');
+            const singleEl = document.getElementById('res-curl-single');
+            const allEl = document.getElementById('res-curl-all');
+            if (!box || !singleEl || !allEl || !code) return;
+
+            const baseUrl = window.location.origin;
+            const list = Array.isArray(files) ? files : [];
+            const representative = list[0];
+            singleEl.textContent = representative
+                ? `curl -L -OJ ${shellQuote(`${baseUrl}/api/files/${representative.code}/download`)}`
+                : '上傳完成後會顯示單檔下載指令';
+            allEl.textContent = `curl -L -o files.zip ${shellQuote(`${baseUrl}/api/sessions/${code}/download-all`)}`;
+            box.style.display = 'block';
+        }
 
         function copyToClipboard(id) {
             const input = document.getElementById(id);
