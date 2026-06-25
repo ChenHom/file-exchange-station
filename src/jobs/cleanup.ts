@@ -6,7 +6,7 @@ export async function cleanupExpired(): Promise<number> {
 
   // 1. 處理 Session 過期：將 status 設為 expired 並標記檔案為 deleted
   const expiredSessions = await queryMany<{ id: number }>(
-    'SELECT id FROM exchange_sessions WHERE expires_at < NOW() AND status = ?',
+    "SELECT id FROM exchange_sessions WHERE expires_at < strftime('%Y-%m-%d %H:%M:%f', 'now') AND status = ?",
     ['active']
   );
 
@@ -46,8 +46,8 @@ export async function cleanupExpired(): Promise<number> {
     removedCount: removed
   };
   await execute(
-    'INSERT INTO system_config (config_key, config_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE config_value = ?',
-    ['last_cleanup_stats', JSON.stringify(stats), JSON.stringify(stats)]
+    "INSERT INTO system_config (config_key, config_value) VALUES (?, ?) ON CONFLICT(config_key) DO UPDATE SET config_value = excluded.config_value, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now')",
+    ['last_cleanup_stats', JSON.stringify(stats)]
   );
 
   return removed;
