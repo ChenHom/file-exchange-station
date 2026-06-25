@@ -63,4 +63,30 @@ file-exchange-station 沒一起遷移，導致 `/health` 回報 `database: down`
 ## Follow-up（非必要）
 
 - 之後若需要更乾淨的 timestamp 自動更新，可考慮在 sqlite 加 trigger 補 `ON UPDATE`；現況沒有 code path 依賴它。
-- 可以把 `npm run start` 包成 systemd user unit，避免 reload 後要手動 `node dist/index.js`。
+
+## Service management
+
+Service 已包成 systemd user unit：`~/.config/systemd/user/file-exchange.service`，
+透過 nvm default 啟動，linger 已開，reboot 後自動拉起。
+
+### 常用指令
+
+```bash
+systemctl --user status file-exchange       # 狀態
+systemctl --user restart file-exchange      # 重啟
+systemctl --user stop file-exchange         # 停止
+journalctl --user -u file-exchange -f       # 跟 log（或看 logs/service.{log,err.log}）
+```
+
+### 升級 Node 版本
+
+`better-sqlite3` 是 native module，換 node 後要重編：
+
+```bash
+nvm install <new-ver>
+nvm alias default <new-ver>
+cd ~/services/file-exchange-station
+npm rebuild better-sqlite3
+systemctl --user restart file-exchange.service
+curl -s http://127.0.0.1:3099/health
+```
