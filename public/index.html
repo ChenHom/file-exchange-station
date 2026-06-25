@@ -415,7 +415,7 @@
 
             try {
                 if (!targetCode) {
-                    const res = await fetch('/api/sessions', {
+                    const res = await fetch('/file-exchange/api/sessions', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ title: `快速傳輸 (${new Date().toLocaleTimeString()})` })
@@ -447,7 +447,7 @@
                 const statusText = document.getElementById('progress-text');
                 
                 const xhr = new XMLHttpRequest();
-                xhr.open('POST', `/api/sessions/${code}/files`, true);
+                xhr.open('POST', `/file-exchange/api/sessions/${code}/files`, true);
 
                 xhr.upload.onprogress = (ev) => {
                     if (ev.lengthComputable) {
@@ -508,7 +508,7 @@
             }
 
             try {
-                const res = await fetch(`/api/sessions/${code}`);
+                const res = await fetch(`/file-exchange/api/sessions/${code}`);
                 const result = await res.json();
 
                 if (!result.success) throw new Error(result.error?.message || '查無此交換站');
@@ -547,7 +547,7 @@
 
         async function refreshFiles() {
             try {
-                const res = await fetch(`/api/sessions/${currentCode}/files`);
+                const res = await fetch(`/file-exchange/api/sessions/${currentCode}/files`);
                 const result = await res.json();
                 const list = document.getElementById('file-list');
                 const empty = document.getElementById('empty-list');
@@ -650,14 +650,14 @@
         }
 
         function downloadFile(fileCode) {
-            window.open(`/api/files/${fileCode}/download`, '_blank');
+            window.open(`/file-exchange/api/files/${fileCode}/download`, '_blank');
         }
 
         async function deleteFile(fileCode) {
             if (!confirm('確定要刪除此檔案？')) return;
 
             try {
-                const res = await fetch(`/api/files/${fileCode}`, { method: 'DELETE' });
+                const res = await fetch(`/file-exchange/api/files/${fileCode}`, { method: 'DELETE' });
                 const result = await res.json();
                 if (result.success) {
                     alert('已刪除');
@@ -669,12 +669,12 @@
         }
 
         function downloadAllZip() {
-            window.location.href = `/api/sessions/${currentCode}/download-all`;
+            window.location.href = `/file-exchange/api/sessions/${currentCode}/download-all`;
         }
 
         async function fetchStats() {
             try {
-                const res = await fetch('/api/stats');
+                const res = await fetch('/file-exchange/api/stats');
                 const result = await res.json();
                 if (result.success) {
                     const ds = result.data.diskSpace;

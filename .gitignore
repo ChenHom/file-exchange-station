@@ -3,7 +3,10 @@ dist/
 .env
 .env.local
 .env.*.local
+.env.bak.*
 storage/uploads/*
 !storage/uploads/.gitkeep
+storage/file-exchange.db
+storage/file-exchange.db-*
 logs/
 *.log

@@ -13,8 +13,8 @@ export async function getNgrokUrlFromLocal(): Promise<string | null> {
 
 export async function updateSystemConfig(key: string, value: string): Promise<void> {
   await execute(
-    'INSERT INTO system_config (config_key, config_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE config_value = ?, updated_at = CURRENT_TIMESTAMP(3)',
-    [key, value, value]
+    "INSERT INTO system_config (config_key, config_value) VALUES (?, ?) ON CONFLICT(config_key) DO UPDATE SET config_value = excluded.config_value, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now')",
+    [key, value]
   );
 }
 
