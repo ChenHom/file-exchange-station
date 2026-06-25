@@ -6,7 +6,7 @@ dist/
 .env.bak.*
 storage/uploads/*
 !storage/uploads/.gitkeep
-storage/file-exchange.db
-storage/file-exchange.db-*
+data/*.db
+data/*.db-*
 logs/
 *.log
