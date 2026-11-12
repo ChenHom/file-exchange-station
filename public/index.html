@@ -182,20 +182,28 @@
         .btn-remove:hover { opacity: 0.7; }
         
         .token-display { 
+        .token-display { 
             background: var(--token-bg); border: 1px solid var(--token-border); 
             padding: 16px; border-radius: 8px; margin-top: 1.25rem; 
-            display: none; 
+            display: none; overflow: hidden;
         }
         .share-item { margin-bottom: 0.85rem; }
         .share-item label { display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; }
-        .copy-group { display: flex; gap: 0.5rem; }
-        .copy-group input { background: var(--card); color: var(--text); }
+        .copy-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .copy-group input { flex: 1; min-width: 0; background: var(--card); color: var(--text); }
         .curl-box { margin-top: 1rem; padding: 14px; border: 1px solid var(--curl-border); border-radius: 8px; background: var(--curl-bg); }
         .curl-box h4 { margin: 0 0 0.6rem 0; font-size: 13px; color: var(--primary); }
         .curl-command { margin-bottom: 0.65rem; }
         .curl-command:last-child { margin-bottom: 0; }
         .curl-command label { display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; }
         .curl-command pre { margin: 0; padding: 10px; border-radius: 6px; background: #1d1d1f; color: #e5e5ea; overflow-x: auto; font-size: 12px; line-height: 1.45; white-space: pre-wrap; word-break: break-all; }
+
+        @media (max-width: 600px) {
+            .copy-group input { display: none; }
+            .copy-group .btn { width: 100%; padding: 10px; font-size: 14px; }
+            .card { padding: 1.25rem; }
+            .upload-zone { padding: 2rem 1rem; }
+        }
 
         .session-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 14px; }
         .session-title { font-size: 16px; font-weight: 600; margin: 0; color: var(--text); }
@@ -257,8 +265,8 @@
             <div class="card">
                 <div id="upload-zone" class="upload-zone">
                     <p>拖曳檔案至此或點擊上傳</p>
-                    <small style="color:var(--text-light)">單檔上限 20MB | 自動建立 24h 暫存空間</small>
-                    <input type="file" id="file-input" style="display:none;">
+                    <small style="color:var(--text-light)">單檔上限 100MB | 自動建立 24h 暫存空間</small>
+                    <input type="file" id="file-input" style="display:none;" multiple>
                 </div>
 
                 <div id="upload-preview" class="upload-preview">
@@ -409,7 +417,7 @@
                 }
             });
 
-            // 檔案列表點擊委派 (處理下載與刪除)
+            // 檔案列表點擊委派 (處理下載)
             document.getElementById('file-list').addEventListener('click', (ev) => {
                 const btn = ev.target.closest('button');
                 if (!btn) return;
@@ -417,8 +425,6 @@
                 const fileCode = btn.dataset.code;
                 if (btn.classList.contains('btn-download')) {
                     downloadFile(fileCode);
-                } else if (btn.classList.contains('btn-delete')) {
-                    deleteFile(fileCode);
                 }
             });
             
@@ -430,10 +436,7 @@
         };
 
         function showHomepage() {
-            document.getElementById('homepage-view').style.display = 'block';
-            document.getElementById('session-view').style.display = 'none';
-            document.getElementById('error-msg').textContent = '';
-            history.pushState(null, '', '/');
+            window.location.href = '/';
         }
 
         function setupDragAndDrop() {
@@ -473,8 +476,25 @@
                 return;
             }
             
-            // 將新選取的檔案加入現有隊列 (支援多次選取)
-            pendingFiles = [...pendingFiles, ...Array.from(files)];
+            const newFiles = Array.from(files);
+            const currentNames = new Set(pendingFiles.map(f => f.name));
+            
+            // 過濾掉重複檔名的檔案
+            const filteredNewFiles = newFiles.filter(file => {
+                if (currentNames.has(file.name)) {
+                    console.warn(`忽略重複檔案: ${file.name}`);
+                    return false;
+                }
+                return true;
+            });
+
+            if (filteredNewFiles.length === 0 && newFiles.length > 0) {
+                alert('選取的檔案皆已在待上傳清單中。');
+                return;
+            }
+
+            // 將過濾後的新選取檔案加入現有隊列
+            pendingFiles = [...pendingFiles, ...filteredNewFiles];
             renderPreviewList();
             
             document.getElementById('upload-preview').style.display = 'block';
@@ -520,8 +540,8 @@
         async function startUploadProcess() {
             if (pendingFiles.length === 0) return;
             
-            // 如果已在 session-view，則上傳到當前 session
-            let targetCode = (document.getElementById('session-view').style.display === 'block') ? currentCode : document.getElementById('code-input').value.trim();
+            const isSessionView = document.getElementById('session-view').style.display === 'block';
+            let targetCode = isSessionView ? currentCode : document.getElementById('code-input').value.trim();
             
             const errorMsg = document.getElementById('error-msg');
             const container = document.getElementById('progress-container');
@@ -544,6 +564,8 @@
                     const result = await res.json();
                     if (!result.success) throw new Error(result.error?.message || '建立空間失敗');
                     targetCode = result.data.session.code;
+                    // 同步更新全域變數，確保後續操作（如 refreshFiles）正常
+                    currentCode = targetCode;
                 }
 
                 for (let i = 0; i < pendingFiles.length; i++) {
@@ -555,7 +577,13 @@
                 statusText.textContent = `成功上傳 ${pendingFiles.length} 個檔案！`;
                 document.getElementById('progress-fill').style.background = 'var(--success)';
                 pendingFiles = [];
+                
+                // 如果在 session-view，上傳完畢後重整列表
+                if (isSessionView) {
+                    refreshFiles();
+                }
             } catch (err) {
+                console.error('[Upload Error]', err);
                 errorMsg.textContent = err.message;
                 container.style.display = 'none';
             }
@@ -569,6 +597,7 @@
                 
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `/file-exchange/api/sessions/${code}/files`, true);
+                xhr.timeout = 120000; // 2 分鐘超時
 
                 xhr.upload.onprogress = (ev) => {
                     if (ev.lengthComputable) {
@@ -580,9 +609,18 @@
                 };
 
                 xhr.onload = () => {
-                    if (xhr.status === 201) {
+                    try {
+                        let response;
+                        let parseSuccess = true;
                         try {
-                            JSON.parse(xhr.responseText);
+                            response = xhr.responseText ? JSON.parse(xhr.responseText) : {};
+                        } catch {
+                            parseSuccess = false;
+                            const excerpt = xhr.responseText ? xhr.responseText.substring(0, 100) : '無內容';
+                            response = { success: false, error: { message: `回應格式錯誤 (HTTP ${xhr.status}): ${excerpt}...` } };
+                        }
+
+                        if (xhr.status === 201 && parseSuccess) {
                             const baseUrl = window.location.origin + window.location.pathname.replace(/\/$/, '');
                             
                             document.getElementById('res-code').value = code;
@@ -593,23 +631,27 @@
                             if (!isSessionView) {
                                 const rb = document.getElementById('upload-result-box');
                                 rb.style.display = 'block';
-                                rb.scrollIntoView({ behavior: 'smooth' });
-                            }
-                            
-                            if (isSessionView) {
-                                refreshFiles();
+                                // 安全的捲動處理
+                                if (typeof rb.scrollIntoView === 'function') {
+                                    try {
+                                        rb.scrollIntoView({ behavior: 'smooth' });
+                                    } catch {
+                                        rb.scrollIntoView(); // 降級處理
+                                    }
+                                }
                             }
                             resolve();
-                        } catch (parseErr) {
-                            reject(new Error(`解析回應失敗: ${parseErr.message}`));
+                        } else {
+                            const msg = response.error?.message || `上傳失敗 (HTTP ${xhr.status})`;
+                            reject(new Error(`檔案 ${file.name} ${msg}`));
                         }
-                    } else {
-                        const result = JSON.parse(xhr.responseText);
-                        reject(new Error(`檔案 ${file.name} 上傳失敗: ` + (result.error?.message || '未知錯誤')));
+                    } catch (e) {
+                        reject(new Error(`檔案 ${file.name} 發生非預期錯誤: ${e.message}`));
                     }
                 };
 
                 xhr.onerror = () => reject(new Error(`檔案 ${file.name} 網路連線失敗`));
+                xhr.ontimeout = () => reject(new Error(`檔案 ${file.name} 上傳超時`));
 
                 const formData = new FormData();
                 formData.append('file', file);
@@ -697,7 +739,6 @@
                         </div>
                         <div style="display:flex; gap:0.5rem;">
                             <button class="btn btn-primary btn-sm btn-download" data-code="${file.code}">下載</button>
-                            <button class="btn btn-danger btn-sm btn-delete" data-code="${file.code}">刪除</button>
                         </div>
                     `;
                     list.appendChild(li);
@@ -729,18 +770,36 @@
             box.style.display = 'block';
         }
 
-        function copyToClipboard(id) {
+        async function copyToClipboard(id) {
             const input = document.getElementById(id);
-            input.select();
-            document.execCommand('copy');
+            const textToCopy = input.value;
             const btn = input.nextElementSibling;
             const originalText = btn.textContent;
-            btn.textContent = '已複製!';
-            btn.classList.replace('btn-outline', 'btn-primary');
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.classList.replace('btn-primary', 'btn-outline');
-            }, 2000);
+
+            try {
+                // 優先使用現代 API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(textToCopy);
+                } else {
+                    // 降級方案
+                    input.select();
+                    document.execCommand('copy');
+                }
+                
+                btn.textContent = '已複製!';
+                btn.classList.replace('btn-outline', 'btn-primary');
+            } catch (err) {
+                console.error('複製失敗:', err);
+                // 極端情況下的手動選擇提示
+                input.style.display = 'block';
+                input.select();
+                alert('您的瀏覽器不支援自動複製，請手動選取文字後按複製。');
+            } finally {
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.replace('btn-primary', 'btn-outline');
+                }, 2000);
+            }
         }
 
         function updateExpiryCountdown(expiresAt) {
@@ -772,21 +831,6 @@
 
         function downloadFile(fileCode) {
             window.open(`/file-exchange/api/files/${fileCode}/download`, '_blank');
-        }
-
-        async function deleteFile(fileCode) {
-            if (!confirm('確定要刪除此檔案？')) return;
-
-            try {
-                const res = await fetch(`/file-exchange/api/files/${fileCode}`, { method: 'DELETE' });
-                const result = await res.json();
-                if (result.success) {
-                    alert('已刪除');
-                    refreshFiles();
-                } else {
-                    alert('失敗: ' + result.error.message);
-                }
-            } catch (consoleErr) { alert('系統錯誤: ' + consoleErr); }
         }
 
         function downloadAllZip() {
