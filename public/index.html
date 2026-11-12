@@ -6,132 +6,223 @@
     <title>暫存檔案交換站 | File Exchange Station</title>
     <style>
         :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --danger: #dc2626;
-            --success: #16a34a;
-            --bg: #f8fafc;
+            color-scheme: light;
+            --primary: #0066cc;
+            --primary-hover: #0055b3;
+            --danger: #d70015;
+            --success: #248a3d;
+            --bg: #ececec;
+            --toolbar: #f5f5f7;
             --card: #ffffff;
-            --text: #1e293b;
-            --text-light: #64748b;
-            --border: #e2e8f0;
+            --zebra: #f9f9fb;
+            --text: #1d1d1f;
+            --text-light: #6e6e73;
+            --border: #d2d2d7;
+            --border-soft: #e5e5ea;
+            --token-bg: #f2faf4;
+            --token-border: #b7e1c1;
+            --curl-bg: #f5f5f7;
+            --curl-border: #d2d2d7;
+        }
+        body[data-mode="dark"] {
+            color-scheme: dark;
+            --primary: #0a84ff;
+            --primary-hover: #409cff;
+            --danger: #ff453a;
+            --success: #30d158;
+            --bg: #1e1e1e;
+            --toolbar: #2c2c2e;
+            --card: #252528;
+            --zebra: #2a2a2d;
+            --text: #f5f5f7;
+            --text-light: #98989d;
+            --border: #3a3a3c;
+            --border-soft: #323234;
+            --token-bg: rgba(48, 209, 88, 0.1);
+            --token-border: rgba(48, 209, 88, 0.35);
+            --curl-bg: #1e1e1e;
+            --curl-border: #3a3a3c;
         }
         * { box-sizing: border-box; }
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Noto Sans TC", sans-serif; 
             background: var(--bg); 
             color: var(--text); 
-            max-width: 800px; 
+            max-width: 1180px; 
             margin: 0 auto; 
-            padding: 2rem 1rem; 
-            line-height: 1.5; 
+            padding: 18px 22px; 
+            line-height: 1.5;
+            transition: background-color 0.15s, color 0.15s;
         }
-        
-        .sys-stats { font-size: 0.75rem; color: var(--text-light); text-align: right; margin-bottom: 1rem; }
-        
-        h1 { text-align: center; color: var(--primary); margin-bottom: 2rem; font-weight: 800; }
+        header.mac-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            background: var(--toolbar);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 14px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        }
+        .title-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .hub-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text);
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 5px 10px;
+            text-decoration: none;
+            box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+            white-space: nowrap;
+        }
+        .hub-back:hover { background: var(--zebra); border-color: var(--primary); }
+        h1 { font-size: 17px; font-weight: 600; color: var(--text); margin: 0; letter-spacing: 0; }
+        .sys-stats {
+            font-size: 11px;
+            color: var(--text-light);
+            border: 1px solid var(--border);
+            background: var(--card);
+            border-radius: 6px;
+            padding: 4px 9px;
+            margin: 0;
+            font-variant-numeric: tabular-nums;
+        }
+        .mode-switch {
+            display: inline-flex;
+            background: rgba(120, 120, 128, 0.16);
+            padding: 2px;
+            border-radius: 6px;
+            gap: 2px;
+        }
+        .mode-btn {
+            font: inherit;
+            background: transparent;
+            color: var(--text);
+            border: 0;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .mode-btn.active {
+            background: var(--card);
+            color: var(--text);
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16);
+        }
         .card { 
             background: var(--card); 
-            padding: 2rem; 
-            border-radius: 16px; 
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); 
-            margin-bottom: 1.5rem; 
+            padding: 20px; 
+            border: 1px solid var(--border);
+            border-radius: 8px; 
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03); 
+            margin-bottom: 14px; 
         }
-        
         .upload-zone { 
-            border: 3px dashed var(--border); 
-            border-radius: 12px; 
-            padding: 3rem 2rem; 
+            border: 2px dashed var(--border); 
+            border-radius: 8px; 
+            padding: 2.25rem 1.5rem; 
             text-align: center; 
             cursor: pointer; 
-            transition: all 0.2s ease; 
-            background: #fff;
+            transition: all 0.15s ease; 
+            background: var(--toolbar);
         }
         .upload-zone:hover, .upload-zone.dragover { 
-            background: #eff6ff; 
             border-color: var(--primary); 
-            transform: scale(1.01);
+            background: var(--zebra);
         }
-        .upload-zone p { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .upload-zone p { font-size: 15px; font-weight: 600; margin: 0 0 6px 0; }
         
-        .input-group { display: flex; flex-direction: column; gap: 0.75rem; max-width: 500px; margin: 1.5rem auto; }
+        .input-group { display: flex; flex-direction: column; gap: 0.75rem; max-width: 520px; margin: 1.25rem auto 0.5rem; }
         .input-row { display: flex; gap: 0.5rem; }
         input[type="text"] { 
-            flex: 1; padding: 0.875rem; border: 1px solid var(--border); 
-            border-radius: 8px; outline: none; font-size: 1rem;
-            transition: border-color 0.2s;
+            flex: 1; padding: 8px 12px; border: 1px solid var(--border); 
+            border-radius: 6px; outline: none; font-size: 13px;
+            background: var(--card); color: var(--text);
+            transition: border-color 0.15s;
         }
-        input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2); }
 
         .btn { 
-            border: none; border-radius: 8px; padding: 0.75rem 1.25rem; 
-            font-weight: 700; transition: all 0.2s; cursor: pointer; 
-            text-decoration: none; font-size: 1rem; display: inline-flex; 
-            align-items: center; justify-content: center; gap: 0.5rem;
+            border: none; border-radius: 6px; padding: 7px 14px; 
+            font-weight: 500; transition: all 0.15s; cursor: pointer; 
+            text-decoration: none; font-size: 12px; display: inline-flex; 
+            align-items: center; justify-content: center; gap: 0.4rem;
         }
         .btn:active { transform: translateY(1px); }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-primary:hover { background: var(--primary-hover); }
-        .btn-sm { padding: 0.5rem 1rem; font-size: 0.875rem; }
-        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-light); }
-        .btn-outline:hover { background: #f1f5f9; color: var(--text); }
-        .btn-danger { background: #fee2e2; color: var(--danger); }
+        .btn-sm { padding: 5px 11px; font-size: 12px; }
+        .btn-outline { background: var(--toolbar); border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { background: var(--zebra); }
+        .btn-danger { background: rgba(215, 0, 21, 0.12); color: var(--danger); }
         .btn-danger:hover { background: var(--danger); color: white; }
 
-        .upload-progress-container { margin-top: 1.5rem; display: none; }
-        .progress-bar { width: 100%; height: 10px; background: #e2e8f0; border-radius: 5px; overflow: hidden; }
+        .upload-progress-container { margin-top: 1.25rem; display: none; }
+        .progress-bar { width: 100%; height: 8px; background: var(--border-soft); border-radius: 4px; overflow: hidden; }
         .progress-fill { width: 0%; height: 100%; background: var(--primary); transition: width 0.1s; }
         
-        .upload-preview { margin-top: 1.5rem; display: none; border: 1px solid var(--border); border-radius: 12px; padding: 1rem; background: #fdfdfd; }
-        .preview-list { list-style: none; padding: 0; margin: 0 0 1rem 0; }
-        .preview-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem; padding: 0.5rem 0; border-bottom: 1px solid #f1f5f9; }
+        .upload-preview { margin-top: 1.25rem; display: none; border: 1px solid var(--border); border-radius: 8px; padding: 14px; background: var(--toolbar); }
+        .preview-list { list-style: none; padding: 0; margin: 0 0 12px 0; }
+        .preview-item { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 8px 6px; border-bottom: 1px solid var(--border-soft); }
+        .preview-item:nth-child(even) { background: var(--zebra); }
         .preview-item:last-child { border-bottom: none; }
-        .btn-remove { color: var(--danger); background: transparent; border: none; cursor: pointer; font-size: 1.25rem; line-height: 1; padding: 0 0.5rem; font-weight: bold; }
+        .btn-remove { color: var(--danger); background: transparent; border: none; cursor: pointer; font-size: 1.15rem; line-height: 1; padding: 0 0.5rem; font-weight: bold; }
         .btn-remove:hover { opacity: 0.7; }
         
         .token-display { 
-            background: #f0fdf4; border: 1px solid #bbf7d0; 
-            padding: 1.5rem; border-radius: 12px; margin-top: 1.5rem; 
+            background: var(--token-bg); border: 1px solid var(--token-border); 
+            padding: 16px; border-radius: 8px; margin-top: 1.25rem; 
             display: none; 
         }
-        .share-item { margin-bottom: 1rem; }
-        .share-item label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-bottom: 0.25rem; }
+        .share-item { margin-bottom: 0.85rem; }
+        .share-item label { display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; }
         .copy-group { display: flex; gap: 0.5rem; }
-        .copy-group input { background: #fff; }
-        .curl-box { margin-top: 1rem; padding: 1rem; border: 1px solid #bfdbfe; border-radius: 12px; background: #eff6ff; }
-        .curl-box h4 { margin: 0 0 0.75rem 0; color: var(--primary); }
-        .curl-command { margin-bottom: 0.75rem; }
+        .copy-group input { background: var(--card); color: var(--text); }
+        .curl-box { margin-top: 1rem; padding: 14px; border: 1px solid var(--curl-border); border-radius: 8px; background: var(--curl-bg); }
+        .curl-box h4 { margin: 0 0 0.6rem 0; font-size: 13px; color: var(--primary); }
+        .curl-command { margin-bottom: 0.65rem; }
         .curl-command:last-child { margin-bottom: 0; }
-        .curl-command label { display: block; font-size: 0.75rem; font-weight: 800; color: var(--text-light); text-transform: uppercase; margin-bottom: 0.25rem; }
-        .curl-command pre { margin: 0; padding: 0.75rem; border-radius: 8px; background: #0f172a; color: #e2e8f0; overflow-x: auto; font-size: 0.82rem; line-height: 1.45; white-space: pre-wrap; word-break: break-all; }
+        .curl-command label { display: block; font-size: 11px; font-weight: 600; color: var(--text-light); margin-bottom: 4px; }
+        .curl-command pre { margin: 0; padding: 10px; border-radius: 6px; background: #1d1d1f; color: #e5e5ea; overflow-x: auto; font-size: 12px; line-height: 1.45; white-space: pre-wrap; word-break: break-all; }
 
-        .session-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.5rem; }
-        .session-title { font-size: 1.5rem; font-weight: 800; margin: 0; color: var(--text); }
-        .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
-        .status-active { background: #dcfce7; color: #166534; }
-        .status-expired { background: #fee2e2; color: #991b1b; }
+        .session-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 14px; }
+        .session-title { font-size: 16px; font-weight: 600; margin: 0; color: var(--text); }
+        .status-badge { padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .status-active { background: rgba(36, 138, 61, 0.15); color: var(--success); }
+        .status-expired { background: rgba(215, 0, 21, 0.15); color: var(--danger); }
 
-        .file-list { list-style: none; padding: 0; margin: 0; }
+        .file-list { list-style: none; padding: 0; margin: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
         .file-item { 
             display: flex; justify-content: space-between; align-items: center; 
-            padding: 1rem; border: 1px solid var(--border); border-radius: 12px; 
-            margin-bottom: 0.75rem; transition: border-color 0.2s;
-            background: #fff;
+            padding: 10px 14px; border-bottom: 1px solid var(--border-soft); 
+            background: var(--card);
         }
-        .file-item:hover { border-color: var(--primary); }
+        .file-item:nth-child(even) { background: var(--zebra); }
+        .file-item:last-child { border-bottom: 0; }
         .file-info { flex: 1; min-width: 0; }
-        .file-name { font-weight: 700; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .file-meta { font-size: 0.75rem; color: var(--text-light); }
+        .file-name { font-weight: 600; font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-meta { font-size: 11px; color: var(--text-light); font-variant-numeric: tabular-nums; }
         
-        .empty-state { text-align: center; color: var(--text-light); padding: 3rem; }
-        .divider { display: flex; align-items: center; margin: 2rem 0; color: var(--text-light); font-size: 0.875rem; font-weight: 600; }
+        .empty-state { text-align: center; color: var(--text-light); padding: 2.5rem; }
+        .divider { display: flex; align-items: center; margin: 1.5rem 0; color: var(--text-light); font-size: 12px; font-weight: 500; }
         .divider::before, .divider::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
         .divider::before { margin-right: 1rem; }
         .divider::after { margin-left: 1rem; }
 
-        #error-msg { color: var(--danger); font-size: 0.875rem; margin-top: 1rem; text-align: center; font-weight: 600; }
-        #status-feedback { text-align: center; padding: 1rem; font-weight: 600; color: var(--primary); display: none; }
+        #error-msg { color: var(--danger); font-size: 12px; margin-top: 0.75rem; text-align: center; font-weight: 600; }
+        #status-feedback { text-align: center; padding: 0.75rem; font-weight: 600; font-size: 13px; color: var(--primary); display: none; }
 
         @keyframes pulse {
             0% { opacity: 1; }
@@ -139,11 +230,26 @@
             100% { opacity: 1; }
         }
         .loading { animation: pulse 1.5s infinite; }
+        @media (max-width: 760px) {
+            body { padding: 14px; }
+            .card { padding: 14px; }
+        }
     </style>
 </head>
 <body>
-    <div class="sys-stats" id="sys-stats">系統狀態檢查中...</div>
-    <h1>暫存檔案交換站</h1>
+    <header class="mac-header">
+        <div class="title-row">
+            <a class="hub-back" href="/hub/" title="返回 Hom Hub 服務工作台">← 返回 Hub</a>
+            <h1>暫存檔案交換站</h1>
+        </div>
+        <div class="header-actions">
+            <div class="sys-stats" id="sys-stats">系統狀態檢查中...</div>
+            <div class="mode-switch" role="group" aria-label="日夜模式切換">
+                <button type="button" class="mode-btn active" data-mode-pick="light">☀ 日間</button>
+                <button type="button" class="mode-btn" data-mode-pick="dark">☾ 夜間</button>
+            </div>
+        </div>
+    </header>
 
     <div id="app">
         <!-- 首頁：上傳優先 -->
@@ -257,8 +363,23 @@
         let sessionStatus = 'active';
         let pendingFiles = [];
 
+        function applyMode(mode) {
+            const resolved = mode === 'dark' ? 'dark' : 'light';
+            document.body.setAttribute('data-mode', resolved);
+            document.querySelectorAll('[data-mode-pick]').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-mode-pick') === resolved);
+            });
+            try { localStorage.setItem('hom-color-mode', resolved); } catch { /* ignore */ }
+        }
+
         // --- 初始化 ---
         window.onload = () => {
+            let savedMode = 'light';
+            try { savedMode = localStorage.getItem('hom-color-mode') || 'light'; } catch { /* ignore */ }
+            applyMode(savedMode);
+            document.querySelectorAll('[data-mode-pick]').forEach(btn => {
+                btn.addEventListener('click', () => applyMode(btn.getAttribute('data-mode-pick')));
+            });
             fetchStats();
             setupDragAndDrop();
             

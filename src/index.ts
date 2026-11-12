@@ -36,7 +36,7 @@ async function main(): Promise<void> {
     void routeRequest(req, res);
   });
 
-  server.listen(env.PORT, () => {
+  server.listen(env.PORT, '127.0.0.1', () => {
     console.log(`file-exchange-station listening on http://127.0.0.1:${env.PORT}`);
     console.log(`base url: ${env.APP_BASE_URL}`);
   });
