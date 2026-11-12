@@ -84,6 +84,21 @@ describe('API P3 Integration (Mocked)', () => {
     expect(res.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
   });
 
+  it('GET /api/sessions/:code/files 應自動將小寫 code 轉為大寫並成功查詢', async () => {
+    const code = 'newcode12345';
+    req.url = `/api/sessions/${code}/files`;
+    req.method = 'GET';
+
+    (sessionService.getSessionByCode as any).mockResolvedValue({
+      id: 1, code: 'NEWCODE12345', status: 'active', expiresAt: '2026-03-31T00:00:00Z'
+    });
+    (fileService.listFilesBySession as any).mockResolvedValue([]);
+
+    await routeRequest(req, res);
+    expect(sessionService.getSessionByCode).toHaveBeenCalledWith('NEWCODE12345');
+    expect(res.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
+  });
+
   it('GET /api/sessions/:code/download-all 應回傳 ZIP 串流', async () => {
     const code = 'ABCDEFGH2345';
     req.url = `/api/sessions/${code}/download-all`;

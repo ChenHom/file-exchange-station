@@ -154,7 +154,7 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
     const sessionZipMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/download-all$/);
     if (sessionZipMatch) {
       if (req.method !== 'GET') return methodNotAllowed(res);
-      const code = sessionZipMatch[1];
+      const code = sessionZipMatch[1]?.trim().toUpperCase();
       if (!code) throw new AppError('Invalid session code', 400, 'BAD_REQUEST');
       
       const session = await getSessionByCode(code);
@@ -190,7 +190,7 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
     // Sessions by code: /api/sessions/:code
     const sessionMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)$/);
     if (sessionMatch) {
-      const code = sessionMatch[1];
+      const code = sessionMatch[1]?.trim().toUpperCase();
       if (!code) throw new AppError('Invalid session code', 400, 'BAD_REQUEST');
       
       const session = await getSessionByCode(code);
@@ -206,7 +206,7 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
     // Session files: /api/sessions/:code/files
     const sessionFilesMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/files$/);
     if (sessionFilesMatch) {
-      const code = sessionFilesMatch[1];
+      const code = sessionFilesMatch[1]?.trim().toUpperCase();
       if (!code) throw new AppError('Invalid session code', 400, 'BAD_REQUEST');
       const session = await getSessionByCode(code);
       if (!session) throw new AppError('Session not found', 404, 'SESSION_NOT_FOUND');
@@ -257,7 +257,7 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
     const fileDownloadMatch = url.pathname.match(/^\/api\/files\/([^/]+)\/download$/);
     if (fileDownloadMatch) {
       if (req.method !== 'GET') return methodNotAllowed(res);
-      const fileCode = fileDownloadMatch[1];
+      const fileCode = fileDownloadMatch[1]?.trim().toUpperCase();
 
       if (!fileCode) throw new AppError('Invalid file code', 400, 'BAD_REQUEST');
       const file = await getFileByCode(fileCode);
@@ -278,7 +278,7 @@ export async function routeRequest(req: IncomingMessage, res: ServerResponse): P
     const fileDeleteMatch = url.pathname.match(/^\/api\/files\/([^/]+)$/);
     if (fileDeleteMatch) {
       if (req.method !== 'DELETE') return methodNotAllowed(res);
-      const fileCode = fileDeleteMatch[1];
+      const fileCode = fileDeleteMatch[1]?.trim().toUpperCase();
 
       if (!fileCode) throw new AppError('Invalid file code', 400, 'BAD_REQUEST');
       const file = await getFileByCode(fileCode);

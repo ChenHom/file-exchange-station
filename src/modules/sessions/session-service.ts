@@ -48,9 +48,10 @@ export async function createSession(title?: string): Promise<SessionRecord> {
  * - 若已過期，回傳 Record 並由 caller 決定行為 (規格說 expired 可查)
  */
 export async function getSessionByCode(code: string): Promise<SessionRecord | null> {
+  const normalizedCode = code.trim().toUpperCase();
   const session = await queryOne<SessionRecord>(
     'SELECT id, code, title, status, expires_at AS expiresAt, created_at AS createdAt, updated_at AS updatedAt FROM exchange_sessions WHERE code = ? LIMIT 1',
-    [code]
+    [normalizedCode]
   );
 
   if (!session || session.status === 'deleted') {

@@ -153,6 +153,12 @@
         }
         input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2); }
 
+        #code-input {
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
         .btn { 
             border: none; border-radius: 6px; padding: 7px 14px; 
             font-weight: 500; transition: all 0.15s; cursor: pointer; 
@@ -392,10 +398,14 @@
             setupDragAndDrop();
             
             // 綁定按鈕事件
-            document.getElementById('btn-view-session').addEventListener('click', handleViewSession);
-            document.getElementById('code-input').addEventListener('keydown', (ev) => {
+            const codeInput = document.getElementById('code-input');
+            codeInput.addEventListener('input', () => {
+                codeInput.value = codeInput.value.toUpperCase();
+            });
+            codeInput.addEventListener('keydown', (ev) => {
                 if (ev.key === 'Enter') handleViewSession();
             });
+            document.getElementById('btn-view-session').addEventListener('click', handleViewSession);
             document.querySelectorAll('.btn-home').forEach(btn => btn.addEventListener('click', showHomepage));
             document.getElementById('btn-copy-code').addEventListener('click', () => copyToClipboard('res-code'));
             document.getElementById('btn-copy-url').addEventListener('click', () => copyToClipboard('res-url'));
@@ -431,7 +441,7 @@
             const params = new URLSearchParams(window.location.search);
             const code = params.get('code');
             if (code) {
-                loadSession(code);
+                loadSession(code.trim().toUpperCase());
             }
         };
 
@@ -541,7 +551,7 @@
             if (pendingFiles.length === 0) return;
             
             const isSessionView = document.getElementById('session-view').style.display === 'block';
-            let targetCode = isSessionView ? currentCode : document.getElementById('code-input').value.trim();
+            let targetCode = isSessionView ? currentCode : document.getElementById('code-input').value.trim().toUpperCase();
             
             const errorMsg = document.getElementById('error-msg');
             const container = document.getElementById('progress-container');
@@ -660,6 +670,7 @@
         }
 
         async function loadSession(code) {
+            code = (code || '').trim().toUpperCase();
             currentCode = code;
             const errorMsg = document.getElementById('error-msg');
             const feedback = document.getElementById('status-feedback');
@@ -698,7 +709,8 @@
 
         async function handleViewSession() {
             const codeInput = document.getElementById('code-input');
-            const code = codeInput.value.trim();
+            const code = codeInput.value.trim().toUpperCase();
+            codeInput.value = code;
             if (!code) {
                 const errorMsg = document.getElementById('error-msg');
                 errorMsg.textContent = '請輸入 12 碼交換代碼';

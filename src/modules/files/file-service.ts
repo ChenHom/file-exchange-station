@@ -52,9 +52,10 @@ export async function listFilesBySession(sessionId: number): Promise<FileRecord[
 }
 
 export async function getFileByCode(code: string): Promise<FileRecord | null> {
+  const normalizedCode = code.trim().toUpperCase();
   return queryOne<FileRecord>(
     'SELECT id, code, session_id AS sessionId, original_name AS originalName, stored_name AS storedName, mime_type AS mimeType, size_bytes AS sizeBytes, status, token_hash AS tokenHash, download_count AS downloadCount, created_at AS createdAt, updated_at AS updatedAt FROM files WHERE code = ? LIMIT 1',
-    [code]
+    [normalizedCode]
   );
 }
 
