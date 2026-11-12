@@ -254,7 +254,7 @@
     <header class="mac-header">
         <div class="title-row">
             <a class="hub-back" href="/hub/" title="返回 Hom Hub 服務工作台">← 返回 Hub</a>
-            <h1>暫存檔案交換站</h1>
+            <h1><a href="javascript:showHomepage()" style="color:inherit; text-decoration:none;">暫存檔案交換站</a></h1>
         </div>
         <div class="header-actions">
             <div class="sys-stats" id="sys-stats">系統狀態檢查中...</div>
@@ -445,8 +445,22 @@
             }
         };
 
+        function getAppBasePath() {
+            if (window.location.pathname.startsWith('/file-exchange')) {
+                return '/file-exchange/';
+            }
+            const path = window.location.pathname;
+            if (path === '/' || path === '') return '/';
+            return path.endsWith('/') ? path : path.substring(0, path.lastIndexOf('/') + 1) || '/';
+        }
+
+        function getAppBaseUrl() {
+            const base = getAppBasePath().replace(/\/$/, '');
+            return window.location.origin + base;
+        }
+
         function showHomepage() {
-            window.location.href = '/';
+            window.location.href = getAppBasePath();
         }
 
         function setupDragAndDrop() {
@@ -631,7 +645,7 @@
                         }
 
                         if (xhr.status === 201 && parseSuccess) {
-                            const baseUrl = window.location.origin + window.location.pathname.replace(/\/$/, '');
+                            const baseUrl = getAppBaseUrl();
                             
                             document.getElementById('res-code').value = code;
                             document.getElementById('res-url').value = `${baseUrl}/?code=${code}`;
@@ -699,7 +713,7 @@
                 document.getElementById('homepage-view').style.display = 'none';
                 document.getElementById('session-view').style.display = 'block';
                 
-                history.pushState(null, '', `/?code=${code}`);
+                history.pushState(null, '', `${getAppBasePath()}?code=${code}`);
                 refreshFiles();
             } catch (err) {
                 feedback.style.display = 'none';
@@ -772,7 +786,7 @@
             const allEl = document.getElementById('res-curl-all');
             if (!box || !singleEl || !allEl || !code) return;
 
-            const baseUrl = window.location.origin;
+            const baseUrl = getAppBaseUrl();
             const list = Array.isArray(files) ? files : [];
             const representative = list[0];
             singleEl.textContent = representative
